@@ -1,0 +1,279 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<enveloppe id="05" identifiant="ARCA" timestamp="2022-07-05T11:48:26.4563279">
+	<reponseDocumentation id="514232121">
+		<erreurs>
+			<erreurSysteme code="000">
+				<message>OK</message>
+				<origine>n/a</origine>
+			</erreurSysteme>
+			<erreurSysteme code="E01">
+				<message>Le document ne respecte pas le format XML attendu.</message>
+				<origine>enveloppe</origine>
+			</erreurSysteme>
+			<erreurSysteme code="E02">
+				<message>L'enveloppe est vide.</message>
+				<origine>enveloppe</origine>
+			</erreurSysteme>
+			<erreurSysteme code="E03">
+				<message>Enveloppe non valide</message>
+				<origine>enveloppe</origine>
+			</erreurSysteme>
+			<erreurSysteme code="E04">
+				<message>L'id de l'enveloppe est différent du correlation_id</message>
+				<origine>enveloppe</origine>
+			</erreurSysteme>
+			<erreurSysteme code="E05">
+				<message>L'identifiant de l'enveloppe ne contient aucune correspondance avec l'expéditeur (replyTo)</message>
+				<origine>enveloppe</origine>
+			</erreurSysteme>
+			<erreurSysteme code="A01">
+				<message>Echec d'authentification.</message>
+				<origine>authentification</origine>
+			</erreurSysteme>
+			<erreurSysteme code="A02">
+				<message>Compte non actif.</message>
+				<origine>authentification</origine>
+			</erreurSysteme>
+			<erreurSysteme code="M01">
+				<message>Type de message inconnu.</message>
+				<origine>message</origine>
+			</erreurSysteme>
+			<erreurSysteme code="M02">
+				<message>Plusieurs éléments messages portent le même id.</message>
+				<origine>message</origine>
+			</erreurSysteme>
+			<erreurSysteme code="M03">
+				<message>Un message avec le même id a déjà été traité.</message>
+				<origine>message</origine>
+			</erreurSysteme>
+			<erreurSysteme code="M04">
+				<message>Mauvaise requête.</message>
+				<origine>message</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C01">
+				<message>L'identifiant de l'assureur est différent de celui qui se trouve dans l'enveloppe.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C02">
+				<message>La date d'effet ne peut être postérieure à la date d'écheance.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C03">
+				<message>Aucun avenant ne peut être fait sur une police annulée ou résiliée.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C04">
+				<message>Données manquantes pour ce type d'avenant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C05">
+				<message>Données non attendues pour cet avenant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C06">
+				<message>Il ne peut y avoir qu'un seul avenant souscription pour une police donnée et il est toujours le premier de tous les avenants.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C07">
+				<message>Impossible d'annuler le contrat car la date d'effet d'une de ses souscriptions (garanties) est déjà atteinte.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C08">
+				<message>Impossible de résilier le contat car la date d'effet d'au moins une de ses souscriptions (garantie) n'est pas encore atteinte.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C09">
+				<message>Impossible de faire une action car la date d'écheance est déjà atteinte.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C10">
+				<message>La durée d'une prolongation ne peut être supérieure à la durée précédente.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C11">
+				<message>La date d'effet doit être égale à l'ancienne date d'écheance + 1 jour.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C12">
+				<message>La date d'effet doit être supérieure à l'ancienne date d'échéance.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C13">
+				<message>Le tout premier avenant d'un contrat doit obligatoirement être une souscription</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C14">
+				<message>Ce produit n'existe pas.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C15">
+				<message>Ce produit n'est pas encore validé par l'ARCA.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C16">
+				<message>Ce produit est désactivé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C17">
+				<message>Objet assuré introuvable.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C18">
+				<message>Objet assuré non validé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C19">
+				<message>Objet assuré désactivé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C20">
+				<message>Souscription vide : Au moins un élément assureurs ou biens doit être présent.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C21">
+				<message>L'objet garantie utilisé ne couvre pas les personnes.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C22">
+				<message>L'objet garantie utilisé ne couvre pas les biens.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C23">
+				<message>Cette garantie est inexistante.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C24">
+				<message>Cette garantie n'a pas encore été validée.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C25">
+				<message>Cette garantie est désactivée.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C26">
+				<message>Attribut de garantie obligatoire manquant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C27">
+				<message>Attribut de garantie non existant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C28">
+				<message>Utilisation d'un attribut de garanti non multiple plusieur fois.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C29">
+				<message>Cet attribut de garantie n'a pas encore été validé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C30">
+				<message>Cet attribut de garantie est désactivé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C31">
+				<message>Seules les opérations d'ajout de bien sont possibles pour une souscription.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C32">
+				<message>Seules les opérations de suppression ou modification de bien sont disponibles pour les ristournes.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C33">
+				<message>Seules les opérations de d'ajout ou modification de bien sont disponibles pour les incorporations.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C34">
+				<message>Attribut de bien obligatoire manquant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C35">
+				<message>Attribut de bien inexistant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C36">
+				<message>Utilisation d'un attribut de bien non multiple plusieur fois.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C37">
+				<message>Cet attribut de bien n'a pas encore été validé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C38">
+				<message>Cet attribut de bien est désactivé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C39">
+				<message>Code inexistant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C40">
+				<message>La date d'effet ne peut être postérieure à la date d'échéance.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C41">
+				<message>La date d'écheance globale ne peut être antérieure à la date d'écheance de la souscription (garantie).</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C42">
+				<message>La date d'effet globale ne peut être postérieure à la date d'effet de la souscription (garantie).</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C43">
+				<message>Pays inexistant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C44">
+				<message>Commune inexistante.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C45">
+				<message>Devise inexistante.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C46">
+				<message>Aucun produit trouvé.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C47">
+				<message>Donnée non modifiable dans le cas de ce type d'avenant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C48">
+				<message>La date d'échéance ne peut être différente de la précédente date d'échéance pour ce type d'avenant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C49">
+				<message>La date d'effet ne peut être antérieure à la date d'effet précédente.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C50">
+				<message>La date d'effet ne peut être postérieure à la date d'écheance pour ce type d'avenant.</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C51">
+				<message>La même garantie ne peut être utilisée plus d'une fois dans la même souscription</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C52">
+				<message>Le même bien ne peut être utilisé plus d'une fois dans le même objet</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C53">
+				<message>Le numéro d'avenant doit toujours être supérieur au numéro d'avenant précédent</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C54">
+				<message>Le numéro de l'avenant souscription doit toujours être égal à 1</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C55">
+				<message>Ce bien n'existe pas</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+			<erreurSysteme code="C56">
+				<message>Le numéro de police ne respecte pas le format attendu. Seuls les chiffres et le trait (-) sont autorisés</message>
+				<origine>controles</origine>
+			</erreurSysteme>
+		</erreurs>
+	</reponseDocumentation>
+</enveloppe>

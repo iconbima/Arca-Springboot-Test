@@ -1,0 +1,553 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<enveloppe id="05" identifiant="ARCA" timestamp="2022-07-05T12:17:20.0641765">
+	<reponseDocumentation id="514232123">
+		<produit numeroAgrement="12005-090003" version="1" actif="true">
+			<dateModification>2022-06-27T11:50:02.159</dateModification>
+			<dateValidation>2022-06-28T14:46:40.797</dateValidation>
+			<dateAgrement>2019-11-25</dateAgrement>
+			<numeroAgrementAss>12005</numeroAgrementAss>
+			<libelle>ASSURANCE AUTOMOBILE MAYFAIR</libelle>
+			<objetsGaranties>
+				<objetsGarantie code="12005-090003-AUTO" actif="true" couvrePersonne="false" couvreBien="true">
+					<dateModification>2022-06-28T14:43:08.887</dateModification>
+					<dateValidation>2022-06-28T14:46:15.003</dateValidation>
+					<libelle>Responsabilité Civile MAYFAIR</libelle>
+					<typeBien>
+						<code>VTM</code>
+						<libelle>Véhicule terrestre à moteur</libelle>
+						<attributs>
+							<attribut code="TYP" codification="type_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Type</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>40</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="MAR" codification="voiture_marque" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Marque</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>50</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="PUF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Puissance fiscale</libelle>
+								<typeValeur>entier</typeValeur>
+								<ordre>70</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="DMC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Date de mise en circulation</libelle>
+								<typeValeur>date</typeValeur>
+								<ordre>90</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="USA" codification="usage_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Usage</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>110</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="AUS" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Autre usage</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>120</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="TRE" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Type remorque</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>140</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="IRE" codification="" actif="true" obligatoire="false" multiple="true" essentiel="false" modifiable="false">
+								<libelle>Immatriculation remorque</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>150</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="PAY" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Pays d'immatriculation</libelle>
+								<typeValeur>pays</typeValeur>
+								<ordre>160</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="CAR" codification="type_carosserie" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Carosserie</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>180</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="PTA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>PTAC (en kg)</libelle>
+								<typeValeur>entier</typeValeur>
+								<ordre>190</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="PLA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+								<libelle>Nombre de places</libelle>
+								<typeValeur>entier</typeValeur>
+								<ordre>200</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="COH" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Conducteur habituel</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>230</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="DPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Date du permis de conduire</libelle>
+								<typeValeur>date</typeValeur>
+								<ordre>250</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="IMM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+								<libelle>Numéro d'immatriculation</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>10</ordre>
+								<masque>0000SS00</masque>
+							</attribut>
+							<attribut code="CHA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+								<libelle>Numéro de châssis</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>20</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="MOT" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Numéro de moteur</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>30</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="MOD" codification="voiture_modele" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Modèle</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>60</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="ANF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Année de fabrication</libelle>
+								<typeValeur>entier</typeValeur>
+								<ordre>80</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="VAL" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Valeur du véhicule</libelle>
+								<typeValeur>montant</typeValeur>
+								<ordre>100</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="REM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+								<libelle>Véhicule avec remorque</libelle>
+								<typeValeur>bool</typeValeur>
+								<ordre>130</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="SEC" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Présence dispositif de sécurité</libelle>
+								<typeValeur>bool</typeValeur>
+								<ordre>170</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="ENE" codification="energie_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Énergie</libelle>
+								<typeValeur>code</typeValeur>
+								<ordre>210</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="GAR" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Localité de garage habituel</libelle>
+								<typeValeur>commune</typeValeur>
+								<ordre>220</ordre>
+								<masque></masque>
+							</attribut>
+							<attribut code="NPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+								<libelle>Numéro de permis de conduire</libelle>
+								<typeValeur>texte</typeValeur>
+								<ordre>240</ordre>
+								<masque></masque>
+							</attribut>
+						</attributs>
+					</typeBien>
+					<garanties>
+						<garantie type="principale" code="12005-090003-AUTO-RC" actif="true" obligatoire="true">
+							<libelle>Responsabilité Civile</libelle>
+							<typeGarantie actif="true" couvrePersonne="false" couvreBien="true">
+								<libelle>RC des propriétaires véhicules terrestres à moteur (art. 108)</libelle>
+								<categorie actif="true">
+									<code>VTMRC</code>
+									<libelle>RC véhicule terrestre à moteur</libelle>
+									<branche idBranche="10">
+										<libelle>10 - Responsabilité civile des véhicules terrestres automoteurs</libelle>
+										<nomBranche>IARD</nomBranche>
+									</branche>
+								</categorie>
+								<typeBien>
+									<code>VTM</code>
+									<libelle>Véhicule terrestre à moteur</libelle>
+									<attributs>
+										<attribut code="TYP" codification="type_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Type</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>40</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MAR" codification="voiture_marque" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Marque</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>50</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PUF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Puissance fiscale</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>70</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="DMC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Date de mise en circulation</libelle>
+											<typeValeur>date</typeValeur>
+											<ordre>90</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="USA" codification="usage_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Usage</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>110</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="AUS" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Autre usage</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>120</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="TRE" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Type remorque</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>140</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="IRE" codification="" actif="true" obligatoire="false" multiple="true" essentiel="false" modifiable="false">
+											<libelle>Immatriculation remorque</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>150</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PAY" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Pays d'immatriculation</libelle>
+											<typeValeur>pays</typeValeur>
+											<ordre>160</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="CAR" codification="type_carosserie" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Carosserie</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>180</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PTA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>PTAC (en kg)</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>190</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PLA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Nombre de places</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>200</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="COH" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Conducteur habituel</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>230</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="DPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Date du permis de conduire</libelle>
+											<typeValeur>date</typeValeur>
+											<ordre>250</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="IMM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Numéro d'immatriculation</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>10</ordre>
+											<masque>0000SS00</masque>
+										</attribut>
+										<attribut code="CHA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Numéro de châssis</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>20</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MOT" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Numéro de moteur</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>30</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MOD" codification="voiture_modele" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Modèle</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>60</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="ANF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Année de fabrication</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>80</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="VAL" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Valeur du véhicule</libelle>
+											<typeValeur>montant</typeValeur>
+											<ordre>100</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="REM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Véhicule avec remorque</libelle>
+											<typeValeur>bool</typeValeur>
+											<ordre>130</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="SEC" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Présence dispositif de sécurité</libelle>
+											<typeValeur>bool</typeValeur>
+											<ordre>170</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="ENE" codification="energie_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Énergie</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>210</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="GAR" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Localité de garage habituel</libelle>
+											<typeValeur>commune</typeValeur>
+											<ordre>220</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="NPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Numéro de permis de conduire</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>240</ordre>
+											<masque></masque>
+										</attribut>
+									</attributs>
+								</typeBien>
+								<attributs>
+									<attribut code="DUR" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Durée (en mois)</libelle>
+										<typeValeur>entier</typeValeur>
+										<ordre>10</ordre>
+									</attribut>
+									<attribut code="CVT" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Couverture territoriale</libelle>
+										<typeValeur>texte</typeValeur>
+										<ordre>20</ordre>
+									</attribut>
+									<attribut code="FRT" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Assurance frontière</libelle>
+										<typeValeur>bool</typeValeur>
+										<ordre>30</ordre>
+									</attribut>
+								</attributs>
+								<code>RCV</code>
+							</typeGarantie>
+						</garantie>
+						<garantie type="principale" code="12005-090003-AUTO-DR" actif="true" obligatoire="false">
+							<libelle>Recours des Tiers</libelle>
+							<typeGarantie actif="true" couvrePersonne="false" couvreBien="true">
+								<libelle>RC des propriétaires véhicules terrestres à moteur (art. 108)</libelle>
+								<categorie actif="true">
+									<code>VTMRC</code>
+									<libelle>RC véhicule terrestre à moteur</libelle>
+									<branche idBranche="10">
+										<libelle>10 - Responsabilité civile des véhicules terrestres automoteurs</libelle>
+										<nomBranche>IARD</nomBranche>
+									</branche>
+								</categorie>
+								<typeBien>
+									<code>VTM</code>
+									<libelle>Véhicule terrestre à moteur</libelle>
+									<attributs>
+										<attribut code="TYP" codification="type_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Type</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>40</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MAR" codification="voiture_marque" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Marque</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>50</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PUF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Puissance fiscale</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>70</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="DMC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Date de mise en circulation</libelle>
+											<typeValeur>date</typeValeur>
+											<ordre>90</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="USA" codification="usage_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Usage</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>110</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="AUS" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Autre usage</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>120</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="TRE" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Type remorque</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>140</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="IRE" codification="" actif="true" obligatoire="false" multiple="true" essentiel="false" modifiable="false">
+											<libelle>Immatriculation remorque</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>150</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PAY" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Pays d'immatriculation</libelle>
+											<typeValeur>pays</typeValeur>
+											<ordre>160</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="CAR" codification="type_carosserie" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Carosserie</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>180</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PTA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>PTAC (en kg)</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>190</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="PLA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Nombre de places</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>200</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="COH" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Conducteur habituel</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>230</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="DPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Date du permis de conduire</libelle>
+											<typeValeur>date</typeValeur>
+											<ordre>250</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="IMM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Numéro d'immatriculation</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>10</ordre>
+											<masque>0000SS00</masque>
+										</attribut>
+										<attribut code="CHA" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Numéro de châssis</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>20</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MOT" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Numéro de moteur</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>30</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="MOD" codification="voiture_modele" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Modèle</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>60</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="ANF" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Année de fabrication</libelle>
+											<typeValeur>entier</typeValeur>
+											<ordre>80</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="VAL" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Valeur du véhicule</libelle>
+											<typeValeur>montant</typeValeur>
+											<ordre>100</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="REM" codification="" actif="true" obligatoire="true" multiple="false" essentiel="true" modifiable="true">
+											<libelle>Véhicule avec remorque</libelle>
+											<typeValeur>bool</typeValeur>
+											<ordre>130</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="SEC" codification="" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Présence dispositif de sécurité</libelle>
+											<typeValeur>bool</typeValeur>
+											<ordre>170</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="ENE" codification="energie_vehicule" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Énergie</libelle>
+											<typeValeur>code</typeValeur>
+											<ordre>210</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="GAR" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Localité de garage habituel</libelle>
+											<typeValeur>commune</typeValeur>
+											<ordre>220</ordre>
+											<masque></masque>
+										</attribut>
+										<attribut code="NPC" codification="" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+											<libelle>Numéro de permis de conduire</libelle>
+											<typeValeur>texte</typeValeur>
+											<ordre>240</ordre>
+											<masque></masque>
+										</attribut>
+									</attributs>
+								</typeBien>
+								<attributs>
+									<attribut code="DUR" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Durée (en mois)</libelle>
+										<typeValeur>entier</typeValeur>
+										<ordre>10</ordre>
+									</attribut>
+									<attribut code="CVT" actif="true" obligatoire="false" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Couverture territoriale</libelle>
+										<typeValeur>texte</typeValeur>
+										<ordre>20</ordre>
+									</attribut>
+									<attribut code="FRT" actif="true" obligatoire="true" multiple="false" essentiel="false" modifiable="false">
+										<libelle>Assurance frontière</libelle>
+										<typeValeur>bool</typeValeur>
+										<ordre>30</ordre>
+									</attribut>
+								</attributs>
+								<code>RCV</code>
+							</typeGarantie>
+						</garantie>
+					</garanties>
+				</objetsGarantie>
+			</objetsGaranties>
+		</produit>
+	</reponseDocumentation>
+</enveloppe>
