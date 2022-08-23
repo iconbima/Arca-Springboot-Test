@@ -364,14 +364,14 @@ public class SubmitPolicy {
 									attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
 
 									attributs.addElement("valeur")
-											.addText(XMLMapper.findVehicleUsage(vehicle.getString("ai_vehicle_use")))
+											.addText(vehicle.getString("ai_vehicle_use"))
 											.addAttribute("nom", "USA");
 
-									attributs.addElement("valeur").addText(rs.getString("PL_CUR_CODE"))
+									attributs.addElement("valeur").addText("CD")
 											.addAttribute("nom", "PAY");
 
 									// bodywork
-									attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
+									attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_type"))
 											.addAttribute("nom", "CAR");
 									attributs.addElement("valeur").addText(vehicle.getString("weight"))
 											.addAttribute("nom", "PTA");
@@ -869,14 +869,14 @@ public class SubmitPolicy {
 							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur")
-									.addText(XMLMapper.findVehicleUsage(vehicle.getString("ai_vehicle_use")))
+									.addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
 
-							attributs.addElement("valeur").addText(rs.getString("PL_CUR_CODE")).addAttribute("nom",
+							attributs.addElement("valeur").addText("CD").addAttribute("nom",
 									"PAY");
 
 							// bodywork
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
+							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_type"))
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");
@@ -1202,14 +1202,14 @@ public class SubmitPolicy {
 							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur")
-									.addText(XMLMapper.findVehicleUsage(vehicle.getString("ai_vehicle_use")))
+									.addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
 
-							attributs.addElement("valeur").addText(rs.getString("PL_CUR_CODE")).addAttribute("nom",
+							attributs.addElement("valeur").addText("CD").addAttribute("nom",
 									"PAY");
 
 							// bodywork
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
+							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_type"))
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");
@@ -1693,14 +1693,14 @@ public class SubmitPolicy {
 							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur")
-									.addText(XMLMapper.findVehicleUsage(vehicle.getString("ai_vehicle_use")))
+									.addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
 
-							attributs.addElement("valeur").addText(rs.getString("PL_CUR_CODE")).addAttribute("nom",
+							attributs.addElement("valeur").addText("CD").addAttribute("nom",
 									"PAY");
 
 							// bodywork
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
+							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_type"))
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");

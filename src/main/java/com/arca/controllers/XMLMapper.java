@@ -335,7 +335,7 @@ public class XMLMapper {
 
 	}
 
-	public static String findVehicleUsage(String usage) {
+	public static String findVehicleUsageS(String usage) {
 
 		String eneryType = "N/A";
 		try {
