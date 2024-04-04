@@ -141,13 +141,14 @@ public class SaveResponse {
 				}
 				/* If the response is a success */
 				if (statusCode.equals("00")) {
+					System.out.println("Saving the response "+certNo+ " env "+envId+" docId "+docId);
 					/* Update the request row with the cert no */
 					try (PreparedStatement update = oraConn.prepareStatement(
-							"update arca_requests set ar_cert_no = ?  where ar_pl_index = ? and AR_END_INDEX = ? ")) {
+							"update arca_requests set ar_cert_no = ?  where   AR_ENVELOPE_ID = ?  and AR_DOCUMENT_ID = ?  ")) {
 
 						update.setString(1, certNo);
-						update.setString(2, p_pl_index);
-						update.setString(3, p_end_index);
+						update.setString(2, envId);
+						update.setString(3, docId);
 						update.execute();
 
 					}

@@ -20,21 +20,9 @@ import com.arca.rabbit.mq.RabbitMQSender;
 import com.google.gson.JsonObject;
 
 public class SubmitMotorPolicy {
-	private static Connection oraConn = null;
+	//private static Connection oraConn = null;
 	public static Statement stmt = null;
-
-	public SubmitMotorPolicy() {
-		try {
-
-			System.out.println("Connecting To Database");
-			oraConn = CreateConnection.getOraConn();
-			System.out.println("Database Connected!");
-
-		} catch (Exception e) {
-			System.out.println("Errors Connecting to Database\n" + e.getMessage());
-		}
-
-	}
+ 
 
 	public static String getCurrentUtcTime() {
 		return Instant.now().toString();
@@ -45,7 +33,8 @@ public class SubmitMotorPolicy {
 		JsonObject myResponse = new JsonObject();
 
 		try {
-			try (Statement stmt = oraConn.createStatement();
+			try (	 Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
 							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
@@ -192,7 +181,8 @@ public class SubmitMotorPolicy {
 
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 		try {
-			try (Statement stmt = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE, CREATED_ON,"
@@ -208,12 +198,11 @@ public class SubmitMotorPolicy {
 							.addText(String.valueOf(rs.getString("pl_no")).replaceAll("/", "-"));
 
 					try (Statement stmt2 = oraConn.createStatement();
-							ResultSet rs2 = stmt2
-									.executeQuery("select pe_order from uw_endorsements where pe_pl_index = " + pl_index
-											+ " and pe_end_index = " + pl_end_index + " and pe_org_code = "
-											+ Settings.orgCode);) {
+							ResultSet rs2 = stmt2.executeQuery("select COUNT(*)+1 pe_order  from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
 						while (rs2.next()) {
-							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
+							
+ 							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
 									.addAttribute("type", "P");
 
 						}
@@ -503,7 +492,8 @@ public class SubmitMotorPolicy {
 
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 		try {
-			try (Statement stmt = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON,"
@@ -519,12 +509,11 @@ public class SubmitMotorPolicy {
 							.addText(String.valueOf(rs.getString("pl_no")).replaceAll("/", "-"));
 
 					try (Statement stmt2 = oraConn.createStatement();
-							ResultSet rs2 = stmt2
-									.executeQuery("select pe_order from uw_endorsements where pe_pl_index = " + pl_index
-											+ " and pe_end_index = " + pl_end_index + " and pe_org_code = "
-											+ Settings.orgCode);) {
+							ResultSet rs2 = stmt2.executeQuery("select COUNT(*)+1 pe_order  from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
 						while (rs2.next()) {
-							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
+							
+ 							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
 									.addAttribute("type", "A");
 
 						}
@@ -649,7 +638,8 @@ public class SubmitMotorPolicy {
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 
 		try {
-			try (Statement stmt22 = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON,"
@@ -664,12 +654,11 @@ public class SubmitMotorPolicy {
 							.addText(String.valueOf(rs.getString("pl_no")).replaceAll("/", "-"));
 
 					try (Statement stmt2 = oraConn.createStatement();
-							ResultSet rs2 = stmt2
-									.executeQuery("select pe_order from uw_endorsements where pe_pl_index = " + pl_index
-											+ " and pe_end_index = " + pl_end_index + " and pe_org_code = "
-											+ Settings.orgCode);) {
+							ResultSet rs2 = stmt2.executeQuery("select COUNT(*)+1 pe_order  from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
 						while (rs2.next()) {
-							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
+							
+ 							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
 									.addAttribute("type", "R");
 
 						}
@@ -980,7 +969,8 @@ public class SubmitMotorPolicy {
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 
 		try {
-			try (Statement stmt22 = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON,"
@@ -1001,7 +991,16 @@ public class SubmitMotorPolicy {
 											+ " and pe_end_index = " + pl_end_index);) {
 						while (rs2.next()) {
 							pe_order = rs2.getInt("pe_order");
-							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
+
+						}
+
+					}
+					try (Statement stmt2 = oraConn.createStatement();
+							ResultSet rs2 = stmt2.executeQuery("select COUNT(*)+1 pe_order  from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
+						while (rs2.next()) {
+							
+ 							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
 									.addAttribute("type", "I");
 
 						}
@@ -1298,7 +1297,8 @@ public class SubmitMotorPolicy {
 
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 		try {
-			try (Statement stmt = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON,"
@@ -1313,20 +1313,17 @@ public class SubmitMotorPolicy {
 							.addText(String.valueOf(rs.getDate("PL_FM_DT").toLocalDate().getYear()));
 					production.addElement("numeroPolice")
 							.addText(String.valueOf(rs.getString("pl_no")).replaceAll("/", "-"));
-
 					try (Statement stmt2 = oraConn.createStatement();
-							ResultSet rs2 = stmt2
-									.executeQuery("select pe_order from uw_endorsements where pe_pl_index = " + pl_index
-											+ " and pe_end_index = " + pl_end_index + " and pe_org_code = "
-											+ Settings.orgCode);) {
+							ResultSet rs2 = stmt2.executeQuery("select COUNT(*)+1 pe_order  from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
 						while (rs2.next()) {
-							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
+							
+ 							production.addElement("numeroAvenant").addText(rs2.getString("pe_order"))
 									.addAttribute("type", "X");
 
 						}
 
 					}
-
 					production.addElement("dateEmission")
 							.addText(String.valueOf(rs.getDate("CREATED_ON").toLocalDate()));
 					production.addElement("dateEffet").addText(String.valueOf(rs.getDate("PL_FM_DT").toLocalDate()));
@@ -1480,7 +1477,8 @@ public class SubmitMotorPolicy {
 		production.addElement("produit").addAttribute("version", "1").addText("12005-090003");
 
 		try {
-			try (Statement stmt22 = oraConn.createStatement();
+			try (			Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(
 							"SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON,"
@@ -1823,10 +1821,11 @@ public class SubmitMotorPolicy {
 		return policyXML.asXML();
 	}
 
-	public String vehicleValidation(String query) {
+	public static String vehicleValidation(String query) {
 		try {
 
-			try (Statement stmt222 = oraConn.createStatement();
+			try (	Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt222 = oraConn.createStatement();
 
 					ResultSet rset = stmt222.executeQuery("select * from ( " + query + ") \r\n"
 							+ "               UNPIVOT\r\n" + "(\r\n" + "  col_value\r\n"
