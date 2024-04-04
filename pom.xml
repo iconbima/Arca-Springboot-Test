@@ -9,11 +9,11 @@
 		<version>2.7.1</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
-	<groupId>com.arca.app</groupId>
-	<artifactId>Arca-Springboot</artifactId>
+	<groupId>com.arca.test</groupId>
+	<artifactId>Arca-Springboot-Test</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Arca-Springboot</name>
-	<description>SpringBoot app for ARCA Motor Cert API Mayfair DRC</description>
+	<name>Arca-Springboot-Test</name>
+	<description>Test app for ARCA Motor Cert API Mayfair DRC</description>
 	<properties>
 		<java.version>1.8</java.version>
 	</properties>

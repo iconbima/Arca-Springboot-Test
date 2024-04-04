@@ -11,7 +11,15 @@ import com.arca.rabbit.mq.*;
 @SpringBootApplication
 public class ArcaSpringbootApplication {
 
+	public static String ENVIRONMENT = "-1";
+
 	public static void main(String[] args) {
+		if (args[0] != null) {
+			ENVIRONMENT = args[0];
+		} else {
+			ENVIRONMENT = "DRC_TEST";
+		}
+		System.out.println("ENVIRONMENT " + ENVIRONMENT);
 		SpringApplication.run(ArcaSpringbootApplication.class, args);
 
 		RabbitMQReceiver receiver = new RabbitMQReceiver();

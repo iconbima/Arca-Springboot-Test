@@ -1,6 +1,7 @@
 package com.arca.rabbit.mq;
 
-import com.arca.controllers.XMLMapper;
+import com.arca.ArcaController;
+import com.arca.controllers.ResponseProsess;
 import com.rabbitmq.client.Channel;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.DeliverCallback;
@@ -14,7 +15,7 @@ public class RabbitMQReceiver {
 	private Channel channel;
 
 	public RabbitMQReceiver() {
-		this.readingQueue = ConnectionUtil.USERNAME + "_out";
+		this.readingQueue = ArcaController.USERNAME + "_out";
 	}
 
 	/**
@@ -29,17 +30,13 @@ public class RabbitMQReceiver {
 		if (channel != null) {
 			channel.basicQos(1);
 			Object monitor = new Object();
-			System.out.println("No of messages " + readingQueue);
-
-			System.out.println("Waiting for message on queue " + readingQueue);
 
 			DeliverCallback deliverCallback = (consumerTag, delivery) -> {// Subscribe to the play queue. Once a message
 																			// falls into the queue this part of the
 																			// code will be executed automatically
 				String receivedMessage = new String(delivery.getBody(), "UTF-8");
-//				System.out.println("received message : " + receivedMessage);
-
-				System.out.println(XMLMapper.processResponse(receivedMessage));
+				System.out.println("Message received back "+receivedMessage);
+				System.out.println(ResponseProsess.processResponse(receivedMessage));
 				long deliveryTag = 0;
 
 				deliveryTag = delivery.getEnvelope().getDeliveryTag();

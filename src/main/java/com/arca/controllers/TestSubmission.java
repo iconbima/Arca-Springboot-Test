@@ -4,9 +4,10 @@ public class TestSubmission {
 
 	public static void main(String[] args) {
 
-//		XMLMapper.saveCertificate("10785",  "0",  "756537",  "01-JAN-2023",
-//				 "01-DEC-2023",  "1000000",  "53356",  "Y");
-		System.out.println(XMLMapper.findBodyType("Buses"));
+		//SaveResponse.updateCertificate("52","5142321362","864884","5142321415-0000000006","00");
+
+		SubmitGITPolicy sp = new SubmitGITPolicy();
+		System.out.println(sp.cancelCertificate("hsjhjsad", "No reason","1000000"));
 
 	}
 

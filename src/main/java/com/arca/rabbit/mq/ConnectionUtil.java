@@ -1,5 +1,6 @@
 package com.arca.rabbit.mq;
 
+import com.arca.ArcaController;
 import com.arca.controllers.CreateConnection;
 import com.rabbitmq.client.Connection;
 import com.rabbitmq.client.ConnectionFactory;
@@ -13,8 +14,6 @@ import javax.net.ssl.SSLContext;
 public class ConnectionUtil {
 
 	private static Connection rabbitMqConnection;
-	public static final String USERNAME = "SXEONZTC";
-	public static final String PASSWORD = "h82D2OrRLA";
 
 	/**
 	 *
@@ -23,28 +22,17 @@ public class ConnectionUtil {
 	public static Connection getRabbitMqConnection() {
 		if (rabbitMqConnection == null) {
 			ConnectionFactory factory = new ConnectionFactory();
-			factory.setHost("mq1.extranet.arca.cd");
+			factory.setHost(ArcaController.ADDRESS);
 			factory.setPort(5671);
-			factory.setVirtualHost("production");
-			factory.setUsername(USERNAME);
-			factory.setPassword(PASSWORD);
-
+			factory.setVirtualHost(ArcaController.HOST);
 			try {
-				String rootFolder = "./";
-				try (Statement stmt = CreateConnection.getOraConn().createStatement();
-						ResultSet rs = stmt.executeQuery(
-								"select sys_name from ad_system_codes where sys_type = 'API_DETAILS' and sys_code = 'ARCA_CERT_PATH'");) {
-					while (rs.next()) {
-						rootFolder = rs.getString("sys_name");
-					}
+				factory.setUsername(ArcaController.USERNAME);
+				factory.setPassword(ArcaController.PASSWORD);
 
-				} catch (SQLException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
+				// rootFolder = "D:\\Api\\Arca\\Certs\\";
 
-				SSLContext sSLContext = new ClientSSL(rootFolder + "Mayfair.p12", "MayFair@201")
-						.getSSLContext("rabbitmq");
+				SSLContext sSLContext = new ClientSSL(ArcaController.ROOTFOLDER + "Mayfair.p12",
+						ArcaController.SSL_PASSWORD).getSSLContext("rabbitmq");
 				factory.useSslProtocol(sSLContext);
 				factory.enableHostnameVerification();
 

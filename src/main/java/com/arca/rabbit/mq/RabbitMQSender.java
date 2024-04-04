@@ -1,5 +1,6 @@
 package com.arca.rabbit.mq;
 
+import com.arca.ArcaController;
 import com.rabbitmq.client.AMQP;
 import com.rabbitmq.client.AMQP.BasicProperties;
 import com.rabbitmq.client.Channel;
@@ -20,8 +21,8 @@ public class RabbitMQSender {
     
 
     public RabbitMQSender() throws IOException {
-        exchangeIn = ConnectionUtil.USERNAME + "_in";
-        replyTo = ConnectionUtil.USERNAME + "_out";
+        exchangeIn = ArcaController.USERNAME + "_in";
+        replyTo = ArcaController.USERNAME + "_out";
         connection = ConnectionUtil.getRabbitMqConnection();
         channel = connection != null ? connection.createChannel() : null;
     }
