@@ -46,7 +46,7 @@ public class ArcaController {
 				while (rs.next()) {
 					if (rs.getString("sys_code").equals("ARCA_CERT_PATH")) {
 						ROOTFOLDER = rs.getString("sys_name");
-						ROOTFOLDER = "D:\\Api\\Arca\\Certs\\";
+						//ROOTFOLDER = "D:\\Api\\Arca\\Certs\\";
 					} else if (rs.getString("sys_code").equals("ARCA_USERNAME")) {
 						USERNAME = (rs.getString("sys_name"));
 					} else if (rs.getString("sys_code").equals("ARCA_PASSWORD")) {
