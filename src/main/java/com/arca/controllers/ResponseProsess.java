@@ -44,7 +44,7 @@ public class ResponseProsess {
 				envelopeID = node.valueOf("@id");
 
 				// save the response first to a file
-				System.out.println(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
+				//System.out.println(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
 				Path path = Paths.get(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
 
 				/* Check if this is a cancellation */
@@ -66,7 +66,7 @@ public class ResponseProsess {
 				} catch (IOException ex) {
 					// Print message as exception occurred when
 					// invalid path of local machine is passed
-					System.out.print("Invalid Path");
+					System.out.print("Invalid Path "+ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
 				}
 
 				String responseType = "documentation";

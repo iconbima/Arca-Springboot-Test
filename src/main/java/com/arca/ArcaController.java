@@ -23,7 +23,6 @@ import com.arca.controllers.SubmitMotorVehicle;
 @RequestMapping("arca")
 public class ArcaController {
 
-	private static Connection oraConn = null;
 	public static Statement stmt = null;
 	public static String USERNAME = "-1";
 	public static String PASSWORD = "-1";
@@ -31,12 +30,12 @@ public class ArcaController {
 	public static String SSL_PASSWORD = "./";
 	public static String HOST = "./";
 	public static String ADDRESS = "./";
+	public static String BOOK = "-1";
 
 	public ArcaController() {
 		try {
 
 			System.out.println("Connecting To Database");
-			oraConn = CreateConnection.getOraConn();
 			System.out.println("Database Connected!");
 			System.out.println("---------------------setting default values------------------------");
 
@@ -57,16 +56,18 @@ public class ArcaController {
 						HOST = (rs.getString("sys_name"));
 					} else if (rs.getString("sys_code").equals("ARCA_ADDRESS")) {
 						ADDRESS = (rs.getString("sys_name"));
+					}else if (rs.getString("sys_code").equals("ARCA_BOOK")) {
+						BOOK = (rs.getString("sys_name"));
 					}
 
 				}
 
-				System.out.println(" USERNAME = " + USERNAME);
-				System.out.println(" PASSWORD = " + PASSWORD);
-				System.out.println(" ROOTFOLDER = " + ROOTFOLDER);
-				System.out.println(" SSL_PASSWORD = " + SSL_PASSWORD);
-				System.out.println(" HOST = " + HOST);
-				System.out.println(" ADDRESS = " + ADDRESS);
+				//System.out.println(" USERNAME = " + USERNAME);
+				//System.out.println(" PASSWORD = " + PASSWORD);
+				//System.out.println(" ROOTFOLDER = " + ROOTFOLDER);
+				//System.out.println(" SSL_PASSWORD = " + SSL_PASSWORD);
+				//System.out.println(" HOST = " + HOST);
+				System.out.println(" BOOK = " + BOOK);
 				System.out.println("---------------------FINISHED------------------------");
 				// rootFolder = "D:\\Api\\Arca\\Certs\\";
 
@@ -75,10 +76,7 @@ public class ArcaController {
 				e1.printStackTrace();
 			}
 
-		} catch (SQLException e) {
-			System.out.println("Errors Connecting to Database\n" + e.getMessage());
-			System.exit(1);
-		} catch (Exception e) {
+		}   catch (Exception e) {
 			System.out.println("Errors Connecting to Database\n" + e.getMessage());
 			System.exit(1);
 		}
@@ -89,13 +87,20 @@ public class ArcaController {
 	@GetMapping(path = "sendArcaRequest/{pl_index}/{end_index}/{created_by}")
 	public String sendMessage(@PathVariable("pl_index") int pl_index, @PathVariable("end_index") int end_index,
 			@PathVariable("created_by") String created_by) throws Exception {
-		String response = "";
-		try (Statement stmt = oraConn.createStatement();
-
+		String response = ""; 
+		try (Statement stmt = CreateConnection.getOraConn().createStatement();
 				ResultSet rs = stmt
-						.executeQuery(" select pc_mc_code, pc_pr_code from uw_policy_class where pc_pl_index = "
-								+ pl_index + " and pc_org_code = '" + Settings.orgCode + "' ")) {
+						.executeQuery(" select pc_mc_code, pc_pr_code,pl_status from uw_policy_class a, uw_policy b"
+								+ " where pc_pl_index = "
+								+ pl_index + " "
+										+ " and pc_pl_index = pl_index "
+										+ " and pc_org_code = pl_org_code "
+										+ " and pc_org_code = '" + Settings.orgCode + "' ")) {
 			while (rs.next()) {
+				if((!rs.getString("pl_status").equals("Active")) &&
+						!ArcaSpringbootApplication.ENVIRONMENT.equals("DRC_TEST")  ){
+					//return "You cannot submit a policy before approving!";
+				}
 				if (rs.getString("pc_pr_code").equals("062") || rs.getString("pc_pr_code").equals("061")) {
 //					response = "We are testing motor policies for now!";
 					SubmitGITPolicy sp = new SubmitGITPolicy();
@@ -122,12 +127,22 @@ public class ArcaController {
 			@PathVariable("risk_index") int risk_index,
 			@PathVariable("created_by") String created_by) throws Exception {
 		String response = "";
-		try (Statement stmt = oraConn.createStatement();
+		try (Statement stmt = CreateConnection.getOraConn().createStatement();
+
 
 				ResultSet rs = stmt
-						.executeQuery(" select pc_mc_code, pc_pr_code from uw_policy_class where pc_pl_index = "
-								+ pl_index + " and pc_org_code = '" + Settings.orgCode + "' ")) {
+						.executeQuery(" select pc_mc_code, pc_pr_code,pl_status from uw_policy_class a, uw_policy b"
+								+ " where pc_pl_index = "
+								+ pl_index + " "
+										+ " and pc_pl_index = pl_index "
+										+ " and pc_org_code = pl_org_code "
+										+ " and pc_org_code = '" + Settings.orgCode + "' ")) {
 			while (rs.next()) {
+
+				if((!rs.getString("pl_status").equals("Active")) &&
+						!ArcaSpringbootApplication.ENVIRONMENT.equals("DRC_TEST")  ) {
+					//return "You cannot submit a policy before approving!";
+				}
 				if (rs.getString("pc_pr_code").equals("062") || rs.getString("pc_pr_code").equals("061")) {
 					response = "This option is available for motor policies only!";
 //					SubmitGITPolicy sp = new SubmitGITPolicy();

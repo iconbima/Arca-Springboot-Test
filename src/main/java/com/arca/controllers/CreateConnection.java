@@ -34,7 +34,6 @@ public class CreateConnection {
 			System.out.println(e.getMessage());
 		}
 
-		System.out.println("ENVIRONMENT "+ArcaSpringbootApplication.ENVIRONMENT);
 		if (ArcaSpringbootApplication.ENVIRONMENT.equals("DRC_TEST")) {
 
 			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.50.11:1527:test19c", "ICON", "B1MA");

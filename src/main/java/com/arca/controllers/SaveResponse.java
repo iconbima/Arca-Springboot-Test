@@ -24,9 +24,6 @@ public class SaveResponse {
 	public static boolean saveCertificate(String p_pl_index, String p_end_index, String p_risk_index, String p_fm_date,
 			String p_to_date, String p_user_code, String certNo, String p_commit) {
 
-		System.out.println(p_fm_date);
-		System.out.println(p_to_date);
-		String pl_mc_code = "";
 
 		boolean saved = false;
 		try {
@@ -39,18 +36,8 @@ public class SaveResponse {
 					policy_no = rs.getString("pl_no");
 				}
 			}
-
-			try (Connection oraConn = CreateConnection.getOraConn();
-					Statement stmt = oraConn.createStatement();
-					ResultSet rs = stmt.executeQuery("select pc_mc_code from uw_policy_class where pc_org_code = '"
-							+ Settings.orgCode + "' and  pc_pl_index = " + p_pl_index)) {
-				while (rs.next()) {
-					pl_mc_code = rs.getString("pc_mc_code");
-				}
-			}
-
-			if (pl_mc_code.equals("06")) {
-
+ 
+			//save the certificate in all files so that they appear as attachment as well
 				try (Connection oraConn = CreateConnection.getOraConn();
 						PreparedStatement update = oraConn.prepareStatement("Insert into ALL_FILES "
 								+ "   (FL_INDEX, FL_ORG_CODE, FL_DOC_TYPE, FL_DOC_NO, FL_DOC_INDEX, FL_NAME, FL_PATH, FL_CONTENT_TYPE, FL_UPLOADED_ON, CREATED_BY, CREATED_ON, CREATED_IP) "
@@ -70,7 +57,7 @@ public class SaveResponse {
 
 				}
 				saved = true;
-			}
+			
 			try (Connection oraConn = CreateConnection.getOraConn();
 					CallableStatement cstmt = oraConn
 							.prepareCall("{call issue_arca_certificate(?,?,?,?,?,?,?,?,?,?,?,?)}");) {
@@ -83,7 +70,7 @@ public class SaveResponse {
 				cstmt.setString(4, p_risk_index);
 				cstmt.setString(5, p_fm_date);
 				cstmt.setString(6, p_to_date);
-				cstmt.setString(7, Settings.bookCode);
+				cstmt.setString(7, ArcaController.BOOK);
 				cstmt.setString(8, p_user_code);
 				cstmt.setString(9, "0.0.0.0");
 				cstmt.setString(10, certNo);
@@ -115,18 +102,20 @@ public class SaveResponse {
 
 			String p_pl_index = "";
 			String p_end_index = "";
+			String p_risk_index = "";
 			String p_user_code = "";
 			String pl_mc_code = "";
 			/* Selecting the policy and end index */
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt = oraConn.createStatement();
 
-					ResultSet rs = stmt.executeQuery("select AR_PL_INDEX, AR_END_INDEX,CREATED_BY from ARCA_REQUESTS"
+					ResultSet rs = stmt.executeQuery("select AR_PL_INDEX, AR_END_INDEX, AR_RISK_INDEX, CREATED_BY from ARCA_REQUESTS"
 							+ " where AR_ENVELOPE_ID = " + envId + " and AR_DOCUMENT_ID = " + docId)) {
 				while (rs.next()) {
 
 					p_pl_index = rs.getString("AR_PL_INDEX");
 					p_end_index = rs.getString("AR_END_INDEX");
+					p_risk_index = rs.getString("AR_RISK_INDEX");
 					p_user_code = rs.getString("CREATED_BY");
 				}
 
@@ -141,7 +130,7 @@ public class SaveResponse {
 				}
 				/* If the response is a success */
 				if (statusCode.equals("00")) {
-					System.out.println("Saving the response "+certNo+ " env "+envId+" docId "+docId);
+					//System.out.println("Saving the response "+certNo+ " env "+envId+" docId "+docId);
 					/* Update the request row with the cert no */
 					try (PreparedStatement update = oraConn.prepareStatement(
 							"update arca_requests set ar_cert_no = ?  where   AR_ENVELOPE_ID = ?  and AR_DOCUMENT_ID = ?  ")) {
@@ -199,13 +188,14 @@ public class SaveResponse {
 
 						try (PreparedStatement update = oraConn.prepareStatement(
 								"update uw_policy_risks set  pl_flex01 =?, pl_flex02 = ? where pl_org_code = ? and "
-										+ "pl_pl_index = ? and PL_END_INDEX = ?   ")) {
+										+ "pl_pl_index = ? and PL_END_INDEX = ?   AND pl_risk_index  = nvl(?,pl_risk_index)")) {
 
 							update.setString(1, certNo);
 							update.setString(2, statusCode == "00" ? "Y" : "N");
 							update.setString(3, Settings.orgCode);
 							update.setString(4, p_pl_index);
 							update.setString(5, p_end_index);
+							update.setString(6, p_risk_index);
 							update.execute();
 
 						}
@@ -216,12 +206,13 @@ public class SaveResponse {
 
 						try (PreparedStatement update = oraConn
 								.prepareStatement("update uw_policy_risks set pl_flex01 = ?  where pl_org_code = ? and"
-										+ " pl_pl_index = ? and PL_END_INDEX = ?  ")) {
+										+ " pl_pl_index = ? and PL_END_INDEX = ?   AND pl_risk_index  = nvl(?,pl_risk_index) ")) {
 
 							update.setString(1, certNo);
 							update.setString(2, Settings.orgCode);
 							update.setString(3, p_pl_index);
 							update.setString(4, p_end_index);
+							update.setString(5, p_risk_index);
 							update.execute();
 
 						}

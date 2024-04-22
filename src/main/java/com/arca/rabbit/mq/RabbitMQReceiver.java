@@ -35,7 +35,7 @@ public class RabbitMQReceiver {
 																			// falls into the queue this part of the
 																			// code will be executed automatically
 				String receivedMessage = new String(delivery.getBody(), "UTF-8");
-				System.out.println("Message received back "+receivedMessage);
+				//System.out.println("Message received back "+receivedMessage);
 				System.out.println(ResponseProsess.processResponse(receivedMessage));
 				long deliveryTag = 0;
 
