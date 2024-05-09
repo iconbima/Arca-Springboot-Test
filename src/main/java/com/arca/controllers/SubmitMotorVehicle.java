@@ -25,6 +25,8 @@ public class SubmitMotorVehicle {
 
 		JsonObject myResponse = new JsonObject();
 		boolean firstRequest = true;
+		boolean firstEndRequest = true;
+		boolean cancelledCert = false;
 
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
@@ -58,13 +60,37 @@ public class SubmitMotorVehicle {
 						}
 					}
 
-					// Check if this is the first request, if not then we will send an addition
+
+					try (Statement stmt2 = oraConn.createStatement();
+							ResultSet rs2 = stmt2.executeQuery("SELECT * FROM arca_requests a WHERE AR_PL_INDEX = "
+									+ pl_index + " AND ar_end_index = " + pl_end_index + " AND ar_risk_index = "
+									+ risk_index + " AND ar_success = 'Y' and AR_REQUEST_TYPE = 'CANCELLATION' and created_on =  "
+									+ " (select max(created_on) from arca_requests where  ar_success = 'Y' and AR_REQUEST_TYPE = 'CANCELLATION'"
+									+ " and AR_PL_INDEX = "+pl_index+" and ar_end_index = "+pl_end_index+" and ar_risk_index = "+risk_index+") ")) {
+						if (rs2.next()) {
+
+							cancelledCert = true;
+
+						}
+					}
+
+					// Check if this is the first policy request
+					try (Statement stmt2 = oraConn.createStatement();
+							ResultSet rs2 = stmt2.executeQuery("select * from arca_requests where AR_PL_INDEX = "
+									+ pl_index + " and ar_success = 'Y'")) {
+						if (rs2.next()) {
+							firstRequest = false;
+
+						}
+					}
+
+					// Check if this is the first endorsement request, if not then we will send an addition
 					// endorsement
 					try (Statement stmt2 = oraConn.createStatement();
 							ResultSet rs2 = stmt2.executeQuery("select * from arca_requests where AR_PL_INDEX = "
-									+ pl_index + " and ar_end_index = " + pl_end_index + " and ar_success = 'Y'")) {
+									+ pl_index + " and ar_end_index = "+pl_end_index+" and ar_success = 'Y'")) {
 						if (rs2.next()) {
-							firstRequest = false;
+							firstEndRequest = false;
 
 						}
 					}
@@ -80,6 +106,14 @@ public class SubmitMotorVehicle {
 
 						}
 					}
+					if(sourceTable.equals("UW") && endType.equals("110")) {
+						
+
+						myResponse.addProperty("status", "-1");
+						myResponse.addProperty("statusDescription",
+								"Please activate the renewal before submitting.");
+						return myResponse.get("statusDescription").toString();
+					}
 
 					String requestXML = "";
 
@@ -88,13 +122,23 @@ public class SubmitMotorVehicle {
 						requestXML = buildPolicyXML(pl_index, pl_end_index, risk_index, rs.getString("correlation_id"),
 								rs.getString("document_id"), "000");
 
+					}else if(cancelledCert) {
+						// Incorporation - Adding to sum insured
+						requestXML = buildIncopEndorsementXML(pl_index, pl_end_index, risk_index,
+								rs.getString("correlation_id"), rs.getString("document_id"));
 					}
 					else {
 					/*
 					 * If this is a new business or renewal, additional or extension and is first
 					 * request then do a new business request
 					 */
-					
+					if(!firstEndRequest) {
+
+						// Incorporation - Adding to sum insured
+						requestXML = buildIncopEndorsementXML(pl_index, pl_end_index, risk_index,
+								rs.getString("correlation_id"), rs.getString("document_id"));
+					}
+					else {
 					if (endType.equals("110")) {
 						// New business or Renewals
 						requestXML = buildPolicyXML(pl_index, pl_end_index, risk_index, rs.getString("correlation_id"),
@@ -104,7 +148,7 @@ public class SubmitMotorVehicle {
 					 * If this is a an addition or new business and is not first request then do an
 					 * addition
 					 */
-					else if (endType.equals("101") ||endType.equals("000") ) {
+					else if (endType.equals("101")  ) {
 						// Incorporation - Adding to sum insured
 						requestXML = buildIncopEndorsementXML(pl_index, pl_end_index, risk_index,
 								rs.getString("correlation_id"), rs.getString("document_id"));
@@ -131,6 +175,7 @@ public class SubmitMotorVehicle {
 						myResponse.addProperty("statusDescription", "No request configured for this endorsement! ");
 						return myResponse.get("statusDescription").toString();
 
+					}
 					}
 				}
 					if (requestXML.startsWith("Error")) {
@@ -344,7 +389,7 @@ public class SubmitMotorVehicle {
 									+ " NVL(TO_CHAR( case when ai_weight_uom = 'Kilograme' then ai_weight  "
 									+ " when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
 									+ " else  0 end),'N/A') weight,TO_CHAR(nvl(ai_seating_capacity,1)) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, "
-									+ "  TO_CHAR(nvl(ai_fc_value,0)) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
+									+ "  TO_CHAR(nvl(ai_fc_value,0)*100) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A') "
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A') "
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A') "
@@ -361,7 +406,7 @@ public class SubmitMotorVehicle {
 									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type, "
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight  "
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A') "
 											+ "              ai_body_type, nvl(ai_make,'N/A') "
 											+ "              ai_make, nvl(ai_model,'N/A') "
@@ -487,9 +532,9 @@ public class SubmitMotorVehicle {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
+											rset.getString("sv_cc_code"),sourceTable);
 									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
-											riskIndex);
+											riskIndex,sourceTable);
 									if (iptPrem > 0) {
 
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -534,12 +579,7 @@ public class SubmitMotorVehicle {
 										garantie.addElement("dateEffet")
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -772,7 +812,7 @@ public class SubmitMotorVehicle {
 									+ " NVL(TO_CHAR( case when ai_weight_uom = 'Kilograme' then ai_weight  "
 									+ " when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
 									+ " else  0 end),'N/A') weight,TO_CHAR(nvl(ai_seating_capacity,1)) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, "
-									+ "  TO_CHAR(nvl(ai_fc_value,0)) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
+									+ "  TO_CHAR(nvl(ai_fc_value,0)*100) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A') "
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A') "
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A') "
@@ -789,7 +829,7 @@ public class SubmitMotorVehicle {
 									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type, "
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight  "
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A') "
 											+ "              ai_body_type, nvl(ai_make,'N/A') "
 											+ "              ai_make, nvl(ai_model,'N/A') "
@@ -915,9 +955,9 @@ public class SubmitMotorVehicle {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
+											rset.getString("sv_cc_code"),sourceTable);
 									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
-											riskIndex);
+											riskIndex,sourceTable);
 									if (iptPrem > 0) {
 
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -964,10 +1004,7 @@ public class SubmitMotorVehicle {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+								 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -1166,7 +1203,7 @@ public class SubmitMotorVehicle {
 									+ " NVL(TO_CHAR( case when ai_weight_uom = 'Kilograme' then ai_weight  "
 									+ " when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
 									+ " else  0 end),'N/A') weight,TO_CHAR(nvl(ai_seating_capacity,1)) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, "
-									+ "  TO_CHAR(nvl(ai_fc_value,0)) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
+									+ "  TO_CHAR(nvl(ai_fc_value,0)*100) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A') "
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A') "
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A') "
@@ -1183,7 +1220,7 @@ public class SubmitMotorVehicle {
 									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type, "
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight  "
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A') "
 											+ "              ai_body_type, nvl(ai_make,'N/A') "
 											+ "              ai_make, nvl(ai_model,'N/A') "
@@ -1309,9 +1346,9 @@ public class SubmitMotorVehicle {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
+											rset.getString("sv_cc_code"),sourceTable);
 									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
-											riskIndex);
+											riskIndex,sourceTable);
 									if (iptPrem > 0) {
 
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -1357,11 +1394,7 @@ public class SubmitMotorVehicle {
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+ 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -1561,7 +1594,7 @@ public class SubmitMotorVehicle {
 									+ " NVL(TO_CHAR( case when ai_weight_uom = 'Kilograme' then ai_weight  "
 									+ " when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
 									+ " else  0 end),'N/A') weight,TO_CHAR(nvl(ai_seating_capacity,1)) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, "
-									+ "  TO_CHAR(nvl(ai_fc_value,0)) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
+									+ "  TO_CHAR(nvl(ai_fc_value,0)*100) ai_fc_value, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_USE', ai_vehicle_use),'N/A') "
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A') "
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A') "
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A') "
@@ -1578,7 +1611,7 @@ public class SubmitMotorVehicle {
 									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type, "
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight  "
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000 "
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A') "
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A') "
 											+ "              ai_body_type, nvl(ai_make,'N/A') "
 											+ "              ai_make, nvl(ai_model,'N/A') "
@@ -1704,9 +1737,9 @@ public class SubmitMotorVehicle {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
+											rset.getString("sv_cc_code"),sourceTable);
 									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
-											riskIndex);
+											riskIndex,sourceTable);
 
 									if (iptPrem > 0) {
 
@@ -1754,10 +1787,7 @@ public class SubmitMotorVehicle {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+									 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {

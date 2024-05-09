@@ -18,21 +18,19 @@ import com.arca.rabbit.mq.RabbitMQSender;
 import com.google.gson.JsonObject;
 
 public class SubmitGITPolicy {
-	private static Connection oraConn = null;
 	public static Statement stmt = null;
-
-	public SubmitGITPolicy() {
-		try {
-
-			System.out.println("Connecting To Database");
-			oraConn = CreateConnection.getOraConn();
-			System.out.println("Database Connected!");
-
-		} catch (Exception e) {
-			System.out.println("Errors Connecting to Database\n" + e.getMessage());
-		}
-
-	}
+	String sourceTable = "UW";
+	/*
+	 * public SubmitGITPolicy() { try {
+	 * 
+	 * System.out.println("Connecting To Database"); oraConn =
+	 * CreateConnection.getOraConn(); System.out.println("Database Connected!");
+	 * 
+	 * } catch (Exception e) { System.out.println("Errors Connecting to Database\n"
+	 * + e.getMessage()); }
+	 * 
+	 * }
+	 */
 
 	public static String getCurrentUtcTime() {
 		return Instant.now().toString();
@@ -43,20 +41,20 @@ public class SubmitGITPolicy {
 		JsonObject myResponse = new JsonObject();
 
 		try {
-			try (Statement stmt = oraConn.createStatement();
+			try (Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
 							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
 				while (rs.next()) {
 
-					RabbitMQSender sender = new RabbitMQSender();
 					String endType = "";
 					// CHECK THE TYPE OF ENDORSEMENT HERE AND CALL THE RELEVANT METHOD TO CREATE XML
 					// REQUEST
 
 					try (Statement stmt2 = oraConn.createStatement();
 							ResultSet rs2 = stmt2.executeQuery("SELECT * FROM arca_requests a WHERE AR_PL_INDEX = "
-									+ pl_index + " AND ar_end_index = "+pl_end_index+" AND ar_success = 'Y' \r\n"
+									+ pl_index + " AND ar_end_index = " + pl_end_index + " AND ar_success = 'Y' \r\n"
 									+ "and AR_REQUEST_TYPE != 'CANCELLATION' AND NOT EXISTS\r\n"
 									+ "(SELECT 1 FROM arca_requests b WHERE     b.AR_PL_INDEX = a.AR_PL_INDEX AND b.ar_end_index = a.ar_end_index\r\n"
 									+ "   AND b.ar_success = 'Y' AND b.created_on > a.created_on AND b.AR_REQUEST_TYPE = 'CANCELLATION')\r\n"
@@ -72,21 +70,29 @@ public class SubmitGITPolicy {
 					}
 
 					try (Statement stmt2 = oraConn.createStatement();
-							ResultSet rs2 = stmt2
-									.executeQuery("select pl_end_internal_code from uw_policy where pl_index = "
+							ResultSet rs2 = stmt2.executeQuery(
+									"select pl_end_internal_code,decode(pl_status,'Active','UH','UW') pl_status from uw_policy where pl_index = "
 											+ pl_index + " and pl_end_index = " + pl_end_index + " and pl_org_code = "
 											+ Settings.orgCode)) {
 						while (rs2.next()) {
 							endType = rs2.getString("pl_end_internal_code");
+							sourceTable = rs2.getString("pl_status");
 						}
 					}
 
-					String requestXML = "";
+					if (sourceTable.equals("UW") && endType.equals("110")) {
 
+						myResponse.addProperty("status", "-1");
+						myResponse.addProperty("statusDescription", "Please activate the renewal before submitting.");
+						return myResponse.get("statusDescription").toString();
+					}
+
+					String requestXML = "";
+					System.out.println(endType);
 					if (endType.equals("000") || endType.equals("110") || endType.equals("100")) {
 						// New business or Renewals
 						requestXML = buildPolicyXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"),endType);
+								rs.getString("document_id"), endType);
 					}
 
 					/*
@@ -134,18 +140,19 @@ public class SubmitGITPolicy {
 					}
 					System.out.println(requestXML);
 
-						PreparedStatement prepareStatement = oraConn.prepareStatement(
-								"INSERT INTO ARCA_REQUESTS (AR_PL_INDEX, AR_END_INDEX, AR_ENVELOPE_ID, AR_DOCUMENT_ID, AR_REQUEST_XML,CREATED_BY,AR_REQUEST_TYPE )"
-										+ " VALUES (?, ?, ?, ?, ?, ?,?)");
-						prepareStatement.setInt(1, pl_index);
-						prepareStatement.setInt(2, pl_end_index);
-						prepareStatement.setString(3, rs.getString("correlation_id"));
-						prepareStatement.setString(4, rs.getString("document_id"));
-						prepareStatement.setString(5, requestXML);
-						prepareStatement.setString(6, created_by);
-						prepareStatement.setString(7, "GIT_CERT");
-						prepareStatement.execute();
-						
+					PreparedStatement prepareStatement = oraConn.prepareStatement(
+							"INSERT INTO ARCA_REQUESTS (AR_PL_INDEX, AR_END_INDEX, AR_ENVELOPE_ID, AR_DOCUMENT_ID, AR_REQUEST_XML,CREATED_BY,AR_REQUEST_TYPE )"
+									+ " VALUES (?, ?, ?, ?, ?, ?,?)");
+					prepareStatement.setInt(1, pl_index);
+					prepareStatement.setInt(2, pl_end_index);
+					prepareStatement.setString(3, rs.getString("correlation_id"));
+					prepareStatement.setString(4, rs.getString("document_id"));
+					prepareStatement.setString(5, requestXML);
+					prepareStatement.setString(6, created_by);
+					prepareStatement.setString(7, "GIT_CERT");
+					prepareStatement.execute();
+
+					RabbitMQSender sender = new RabbitMQSender();
 					if (sender.sendMessage(requestXML, rs.getString("correlation_id"))) {
 
 						myResponse.addProperty("status", "00");
@@ -181,7 +188,8 @@ public class SubmitGITPolicy {
 	}
 
 	// this is the first request
-	public String buildPolicyXML(int pl_index, int pl_end_index, String correlationID, String documentID,String endType) {
+	public String buildPolicyXML(int pl_index, int pl_end_index, String correlationID, String documentID,
+			String endType) {
 		Document policyXML = DocumentHelper.createDocument();
 
 		Element enveloppe = policyXML.addElement("enveloppe").addAttribute("id", String.valueOf(correlationID))
@@ -192,9 +200,9 @@ public class SubmitGITPolicy {
 
 		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 
-
 		try {
-			try (Statement stmt22 = oraConn.createStatement();
+			try (Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
@@ -203,7 +211,7 @@ public class SubmitGITPolicy {
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
 								rs.getString("arca_code"));
 						production.addElement("tauxCommission")
-								.addText(String.format("%.2f", rs.getDouble("comm_rate") ));
+								.addText(String.format("%.2f", rs.getDouble("comm_rate")));
 					}
 
 					production.addElement("produit").addAttribute("version", "1").addText("12005-090006");
@@ -212,7 +220,8 @@ public class SubmitGITPolicy {
 					production.addElement("numeroPolice")
 							.addText(String.valueOf(rs.getString("pl_no")).replaceAll("/", "-"));
 
-					production.addElement("numeroAvenant").addText("1").addAttribute("type", endType.equals("000")?"S":"T");
+					production.addElement("numeroAvenant").addText("1").addAttribute("type",
+							endType.equals("000") ? "S" : "T");
 
 					production.addElement("dateEmission")
 							.addText(String.valueOf(rs.getDate("CREATED_ON").toLocalDate()));
@@ -243,21 +252,20 @@ public class SubmitGITPolicy {
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
 
 						while (client.next()) {
-							//the prenom should be the last name, then nom should be the rest of the name 
-					        String[] nameParts = client.getString("ent_name").split("\\s+");
+							// the prenom should be the last name, then nom should be the rest of the name
+							String[] nameParts = client.getString("ent_name").split("\\s+");
 
-					        // Get the last name
-					        String lastName = nameParts[nameParts.length - 1];
-					        //Get the other names
-					        StringBuilder restOfNames = new StringBuilder();
-					        for (int i = 0; i < nameParts.length - 1; i++) {
-					            restOfNames.append(nameParts[i]);
-					            if (i < nameParts.length - 2) {
-					                restOfNames.append(" "); // Add space between names
-					            }
-					        }
-					        
-					        
+							// Get the last name
+							String lastName = nameParts[nameParts.length - 1];
+							// Get the other names
+							StringBuilder restOfNames = new StringBuilder();
+							for (int i = 0; i < nameParts.length - 1; i++) {
+								restOfNames.append(nameParts[i]);
+								if (i < nameParts.length - 2) {
+									restOfNames.append(" "); // Add space between names
+								}
+							}
+
 							personne.addElement("prenom").addText(lastName);
 							personne.addElement("nom").addText(restOfNames.toString());
 							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
@@ -271,9 +279,9 @@ public class SubmitGITPolicy {
 							ResultSet charges = stmt3.executeQuery(
 									"  SELECT  dl_org_code, dl_pl_index, dl_end_index, b.tax_name dl_charge_type, SUM ( NVL ( (DECODE ('', NULL, NVL (DECODE ( 'Debit', 'Nil', 0, dl_lc_amt), 0),\r\n"
 											+ "  NVL (DECODE ( 'Debit', 'Nil', 0, dl_fc_amt), 0))),  0))    dl_charge_amnt     FROM vw_policy_charges a, gl_tax_types b WHERE     a.dl_org_code = b.tax_org_code      \r\n"
-											+ "  AND a.dl_type = b.tax_type  AND a.dl_code = b.tax_code AND dl_source = 'UW' and dl_pl_index =  "
-											+ pl_index + " and dl_end_index = " + pl_end_index + " and dl_org_code = "
-											+ Settings.orgCode + " GROUP BY\r\n"
+											+ "  AND a.dl_type = b.tax_type  AND a.dl_code = b.tax_code AND dl_source = '"
+											+ sourceTable + "' and dl_pl_index =  " + pl_index + " and dl_end_index = "
+											+ pl_end_index + " and dl_org_code = " + Settings.orgCode + " GROUP BY\r\n"
 											+ "  dl_org_code, dl_pl_index,dl_end_index, b.tax_name ORDER BY dl_charge_type")) {
 
 						while (charges.next()) {
@@ -326,7 +334,7 @@ public class SubmitGITPolicy {
 							}
 
 						}
-					} 
+					}
 
 					try (Statement stmt5 = oraConn.createStatement();
 							ResultSet risk = stmt5.executeQuery("select gi_risk_index, gi_goods_desc, --DESC \r\n"
@@ -399,7 +407,7 @@ public class SubmitGITPolicy {
 
 							try (Statement stmt222 = oraConn.createStatement();
 									ResultSet rset = stmt222.executeQuery(
-											"select sv_cc_code, sv_fm_dt,sv_to_dt,sv_fc_prem,sv_main_cover\r\n"
+											"select sv_cc_code,PKG_UW.GET_COVER_NAME(sv_org_code,sv_mc_code,sv_cc_code) cover_name, sv_fm_dt,sv_to_dt,sv_fc_prem,sv_main_cover\r\n"
 													+ " from UW_POLICY_RISK_COVERS where sv_org_code = "
 													+ Settings.orgCode + " and sv_pl_index = " + pl_index
 													+ " and sv_risk_index =  " + riskIndex);) {
@@ -411,6 +419,10 @@ public class SubmitGITPolicy {
 											|| rset.getString("sv_cc_code").equalsIgnoreCase("ICC(B)")
 											|| rset.getString("sv_cc_code").equalsIgnoreCase("ICC(C)")) {
 
+										attributs.addElement("valeur").addText(rset.getString("cover_name"))
+												.addAttribute("nom", "COG");
+										attributs.addElement("valeur").addText("claims@mayfair.cd")
+										.addAttribute("nom", "CAV");
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
 												"12005-090006-FAC-MV");
 										garantie.addElement("dateEffet")
@@ -442,7 +454,7 @@ public class SubmitGITPolicy {
 			e.printStackTrace();
 		}
 		return policyXML.asXML();
-	} 
+	}
 
 	public String cancelCertificate(String cert_no, String cancel_reason, String created_by) {
 		int correlationID = 0;
@@ -457,7 +469,8 @@ public class SubmitGITPolicy {
 		try {
 
 			RabbitMQSender sender = new RabbitMQSender();
-			try (Statement stmt = oraConn.createStatement();
+			try (Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 					ResultSet rs = stmt.executeQuery("select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id,"
 							+ " nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
 				while (rs.next()) {
@@ -466,17 +479,18 @@ public class SubmitGITPolicy {
 				}
 			}
 
-			try (Statement stmt = oraConn.createStatement();
+			try (Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 					ResultSet rs = stmt.executeQuery("select sys_name codeReason from  ad_system_codes "
-							+ "where sys_code = '"+cancel_reason+"' "
-							+ "and sys_type = 'CERT_REP_R'  ")) {
+							+ "where sys_code = '" + cancel_reason + "' " + "and sys_type = 'CERT_REP_R'  ")) {
 				while (rs.next()) {
 					codeReason = rs.getString("codeReason");
 
 				}
 			}
 
-			try (Statement stmt = oraConn.createStatement();
+			try (Connection oraConn = CreateConnection.getOraConn();
+					Statement stmt = oraConn.createStatement();
 					ResultSet rs = stmt.executeQuery(
 							"select ai_pl_index, pl_end_index,ai_risk_index from AI_VEHICLE_CERTIFICATES a, uw_policy_risks b\r\n"
 									+ "where a.ai_org_code = b.pl_org_code\r\n"
@@ -492,9 +506,10 @@ public class SubmitGITPolicy {
 			}
 			if (pl_index == -1 || end_index == -1) {
 
-				try (Statement stmt = oraConn.createStatement();
-						ResultSet rs = stmt
-								.executeQuery("select ai_pl_index, AI_END_INDEX,ai_risk_index from ai_marine_certificates a "
+				try (Connection oraConn = CreateConnection.getOraConn();
+						Statement stmt = oraConn.createStatement();
+						ResultSet rs = stmt.executeQuery(
+								"select ai_pl_index, AI_END_INDEX,ai_risk_index from ai_marine_certificates a "
 										+ "where a.ai_org_code ='" + Settings.orgCode + "' " + " and ai_cert_no = '"
 										+ cert_no + "'")) {
 					while (rs.next()) {
@@ -525,8 +540,7 @@ public class SubmitGITPolicy {
 				annulationCertificat.addElement("motifAnnulation").addText(codeReason);
 
 				System.out.println(cancellationXML.asXML());
-
-				if (sender.sendMessage(cancellationXML.asXML(), String.valueOf(correlationID))) {
+				try (Connection oraConn = CreateConnection.getOraConn();) {
 					PreparedStatement prepareStatement = oraConn.prepareStatement(
 							"INSERT INTO ARCA_REQUESTS (AR_PL_INDEX, AR_END_INDEX, AR_ENVELOPE_ID, AR_DOCUMENT_ID,"
 									+ " AR_REQUEST_XML,CREATED_BY,AR_REQUEST_TYPE,AR_CERT_NO,AR_RISK_INDEX )"
@@ -541,6 +555,8 @@ public class SubmitGITPolicy {
 					prepareStatement.setString(8, cert_no);
 					prepareStatement.setInt(9, risk_index);
 					prepareStatement.execute();
+				}
+				if (sender.sendMessage(cancellationXML.asXML(), String.valueOf(correlationID))) {
 
 					myResponse.addProperty("status", "00");
 					myResponse.addProperty("statusDescription", "Details submitted successfuly to ARCA");

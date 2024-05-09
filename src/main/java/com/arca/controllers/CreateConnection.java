@@ -43,7 +43,8 @@ public class CreateConnection {
 			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.50.10:1527:bima19c", "ICON", "B1MA");
 
 		}else {
-			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@localhost:1521:icon", "icon", "icon");
+
+			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.50.10:1527:bima19c", "ICON", "B1MA");
 
 		}
 

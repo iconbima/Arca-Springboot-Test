@@ -21,7 +21,7 @@ import com.google.gson.JsonObject;
 
 public class SubmitMotorPolicy {
 
-	static String sourceTable = "UW";
+	String sourceTable = "UW";
 
 	public static String getCurrentUtcTime() {
 		return Instant.now().toString();
@@ -74,6 +74,13 @@ public class SubmitMotorPolicy {
 						}
 					}
 
+					if (sourceTable.equals("UW") && endType.equals("110")) {
+
+						myResponse.addProperty("status", "-1");
+						myResponse.addProperty("statusDescription", "Please activate the renewal before submitting.");
+						return myResponse.get("statusDescription").toString();
+					}
+
 					// Check if this is the first request, if not then we will send an addition
 					// endorsement
 					try (Statement stmt2 = oraConn.createStatement();
@@ -87,55 +94,55 @@ public class SubmitMotorPolicy {
 
 					String requestXML = "";
 
-					if ((endType.equals("000") || endType.equals("110")) && firstRequest) {
-						// New business or Renewals
-						requestXML = buildPolicyXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"), endType);
-					} else if (endType.equals("101")) {
-						// Incorporation - Adding to sum insured
-						requestXML = buildIncopEndorsementXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"));
-
-					} else if (endType.equals("103")) {
-						// Extension - Extending the policy period
-						requestXML = buildExtensionXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"));
-
-					} else if (endType.equals("102") || endType.equals("104")) {
-						// Rebate - Reducing the sum insured
-						requestXML = buildRebateEndorsementXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"));
-
-					} else if (endType.equals("108")) {
-						// Termination - policy termination
-						requestXML = buildTerminationXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"));
-
-					} else if (endType.equals("111")) {
-						// NTU - Policy not taken up
-
-						requestXML = buildNTUXML(pl_index, pl_end_index, rs.getString("correlation_id"),
-								rs.getString("document_id"));
-
-					} else if (endType.isEmpty()) {
-						// Empty end type
-						myResponse.addProperty("status", "-1");
-						myResponse.addProperty("statusDescription", "Endorsement type not found! ");
-						return myResponse.get("statusDescription").toString();
-
-					} else {
-
-						myResponse.addProperty("status", "-1");
-						myResponse.addProperty("statusDescription", "No request configured for this endorsement! ");
-						return myResponse.get("statusDescription").toString();
-
-					}
 					if (firstRequest) {
 						// If it is the first request then change to build policy xml
 						requestXML = buildPolicyXML(pl_index, pl_end_index, rs.getString("correlation_id"),
 								rs.getString("document_id"), "000");
-					}
+					} else {
+						if (endType.equals("110")) {
+							// New business or Renewals
+							requestXML = buildPolicyXML(pl_index, pl_end_index, rs.getString("correlation_id"),
+									rs.getString("document_id"), endType);
+						} else if (endType.equals("101") || endType.equals("000")) {
+							// Incorporation - Adding to sum insured
+							requestXML = buildIncopEndorsementXML(pl_index, pl_end_index,
+									rs.getString("correlation_id"), rs.getString("document_id"));
 
+						} else if (endType.equals("103")) {
+							// Extension - Extending the policy period
+							requestXML = buildExtensionXML(pl_index, pl_end_index, rs.getString("correlation_id"),
+									rs.getString("document_id"));
+
+						} else if (endType.equals("102") || endType.equals("104")) {
+							// Rebate - Reducing the sum insured
+							requestXML = buildRebateEndorsementXML(pl_index, pl_end_index,
+									rs.getString("correlation_id"), rs.getString("document_id"));
+
+						} else if (endType.equals("108")) {
+							// Termination - policy termination
+							requestXML = buildTerminationXML(pl_index, pl_end_index, rs.getString("correlation_id"),
+									rs.getString("document_id"));
+
+						} else if (endType.equals("111")) {
+							// NTU - Policy not taken up
+
+							requestXML = buildNTUXML(pl_index, pl_end_index, rs.getString("correlation_id"),
+									rs.getString("document_id"));
+
+						} else if (endType.isEmpty()) {
+							// Empty end type
+							myResponse.addProperty("status", "-1");
+							myResponse.addProperty("statusDescription", "Endorsement type not found! ");
+							return myResponse.get("statusDescription").toString();
+
+						} else {
+
+							myResponse.addProperty("status", "-1");
+							myResponse.addProperty("statusDescription", "No request configured for this endorsement! ");
+							return myResponse.get("statusDescription").toString();
+
+						}
+					}
 					if (requestXML.startsWith("Error")) {
 
 						myResponse.addProperty("status", "-1");
@@ -156,19 +163,17 @@ public class SubmitMotorPolicy {
 					prepareStatement.setString(6, created_by);
 					prepareStatement.setString(7, "MOTOR_CERT");
 					prepareStatement.execute();
-					 
-						if (sender.sendMessage(requestXML, rs.getString("correlation_id"))) {
 
-							myResponse.addProperty("status", "00");
-							myResponse.addProperty("statusDescription", "Details submitted successfuly to ARCA");
-						} else {
-							myResponse.addProperty("status", "-1");
-							myResponse.addProperty("statusDescription", "Message couldn't be sent ");
-							return myResponse.get("statusDescription").toString();
+					if (sender.sendMessage(requestXML, rs.getString("correlation_id"))) {
 
-						}
+						myResponse.addProperty("status", "00");
+						myResponse.addProperty("statusDescription", "Details submitted successfuly to ARCA");
+					} else {
+						myResponse.addProperty("status", "-1");
+						myResponse.addProperty("statusDescription", "Message couldn't be sent ");
+						return myResponse.get("statusDescription").toString();
 
-					 
+					}
 
 				}
 			} catch (UnsupportedEncodingException e) {
@@ -364,7 +369,7 @@ public class SubmitMotorPolicy {
 											"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 													+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 													+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
-													+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
+													+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
 													+ "              ai_vehicle_use, nvl( ai_body_type,'N/A')\r\n"
 													+ "              ai_body_type, nvl(ai_make,'N/A')\r\n"
 													+ "              ai_make, nvl(ai_model,'N/A')\r\n"
@@ -496,8 +501,9 @@ public class SubmitMotorPolicy {
 											// the
 											// total premium for main cover
 											double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
-													rset.getString("sv_cc_code"));
-											double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex);
+													rset.getString("sv_cc_code"), sourceTable);
+											double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex,
+													sourceTable);
 
 											if (iptPrem > 0) {
 
@@ -510,12 +516,13 @@ public class SubmitMotorPolicy {
 												garantie.addElement("dateEcheance").addText(
 														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-												/*attributs = garantie.addElement("attributs");
-												attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-														.addAttribute("nom", "DUR");
-												attributs.addElement("valeur").addText("false").addAttribute("nom",
-														"FRT");
-												*/
+												/*
+												 * attributs = garantie.addElement("attributs");
+												 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+												 * .addAttribute("nom", "DUR");
+												 * attributs.addElement("valeur").addText("false").addAttribute("nom",
+												 * "FRT");
+												 */
 												garantie.addElement("prime")
 														.addText(String.format("%.0f", iptPrem * 100));
 
@@ -548,11 +555,6 @@ public class SubmitMotorPolicy {
 												garantie.addElement("dateEcheance").addText(
 														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-												attributs = garantie.addElement("attributs");
-												attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-														.addAttribute("nom", "DUR");
-												attributs.addElement("valeur").addText("false").addAttribute("nom",
-														"FRT");
 												garantie.addElement("prime").addText(String.format("%.0f",
 														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 											} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -954,7 +956,7 @@ public class SubmitMotorPolicy {
 											+ "nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A')\r\n"
 											+ "              ai_body_type, nvl(ai_make,'N/A')\r\n"
 											+ "              ai_make, nvl(ai_model,'N/A')\r\n"
@@ -1082,8 +1084,8 @@ public class SubmitMotorPolicy {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex);
+											rset.getString("sv_cc_code"), sourceTable);
+									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
 									if (iptPrem > 0) {
 
@@ -1096,11 +1098,12 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										/*attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										*/garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 									// System.err.println(rset.getString("sv_cc_code"));
@@ -1130,10 +1133,7 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+							 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -1362,7 +1362,7 @@ public class SubmitMotorPolicy {
 									"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A')\r\n"
 											+ "              ai_body_type, nvl(ai_make,'N/A')\r\n"
 											+ "              ai_make, nvl(ai_model,'N/A')\r\n"
@@ -1492,8 +1492,8 @@ public class SubmitMotorPolicy {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex);
+											rset.getString("sv_cc_code"), sourceTable);
+									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
 									if (iptPrem > 0) {
 
@@ -1506,11 +1506,12 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										/*attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										*/garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 									// System.err.println(rset.getString("sv_cc_code"));
@@ -1540,10 +1541,7 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -1960,7 +1958,7 @@ public class SubmitMotorPolicy {
 									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
-											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0) ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
+											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
 											+ "              ai_vehicle_use, nvl( ai_body_type,'N/A')\r\n"
 											+ "              ai_body_type, nvl(ai_make,'N/A')\r\n"
 											+ "              ai_make, nvl(ai_model,'N/A')\r\n"
@@ -2086,8 +2084,8 @@ public class SubmitMotorPolicy {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
 									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
-											rset.getString("sv_cc_code"));
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex);
+											rset.getString("sv_cc_code"), sourceTable);
+									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
 									if (iptPrem > 0) {
 
@@ -2100,11 +2098,12 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										/*attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										*/garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 									// System.err.println(rset.getString("sv_cc_code"));
@@ -2134,10 +2133,7 @@ public class SubmitMotorPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+								 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
@@ -2265,7 +2261,7 @@ public class SubmitMotorPolicy {
 		return "";
 	}
 
-	public static double getIPT(int plIndex, int plEndIndex, String riskIndex, String coverCode) {
+	public static double getIPT(int plIndex, int plEndIndex, String riskIndex, String coverCode, String sourceTable) {
 		double iptPrem = 0.0;
 		try (Connection oraConn = CreateConnection.getOraConn();
 				Statement stmt2222 = oraConn.createStatement();
@@ -2283,7 +2279,7 @@ public class SubmitMotorPolicy {
 		return iptPrem;
 	}
 
-	public static double getYellowCover(int plIndex, int plEndIndex, String riskIndex) {
+	public static double getYellowCover(int plIndex, int plEndIndex, String riskIndex, String sourceTable) {
 		double yellowCover = 0.0;
 		System.out.println("select sv_cc_code, sv_fm_dt,sv_to_dt,sv_fc_prem,sv_main_cover "
 				+ " from VW_POLICY_RISK_COVERS WHERE sv_source = '" + sourceTable + "' AND sv_org_code = "
@@ -2308,23 +2304,20 @@ public class SubmitMotorPolicy {
 	}
 
 	public static String policyHeaderQuery(int pl_index, int pl_end_index) {
-		String endType = "";
-
-		try (Connection oraConn = CreateConnection.getOraConn();
-				Statement stmt2 = oraConn.createStatement();
-				ResultSet rs2 = stmt2.executeQuery(
-						"select pl_end_internal_code,decode(pl_status,'Active','UH','UW') pl_status from uw_policy where pl_index = "
-								+ pl_index + " and pl_end_index = " + pl_end_index + " and pl_org_code = "
-								+ Settings.orgCode)) {
-			while (rs2.next()) {
-				endType = rs2.getString("pl_end_internal_code");
-
-			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		String headerQuery = "SELECT pl_no,pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON, "
+		/*
+		 * String endType = "";
+		 * 
+		 * try (Connection oraConn = CreateConnection.getOraConn(); Statement stmt2 =
+		 * oraConn.createStatement(); ResultSet rs2 = stmt2.executeQuery(
+		 * "select pl_end_internal_code,decode(pl_status,'Active','UH','UW') pl_status from uw_policy where pl_index = "
+		 * + pl_index + " and pl_end_index = " + pl_end_index + " and pl_org_code = " +
+		 * Settings.orgCode)) { while (rs2.next()) { endType =
+		 * rs2.getString("pl_end_internal_code");
+		 * 
+		 * } } catch (SQLException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); }
+		 */
+		String headerQuery = "SELECT (case when pl_type = 'Renewal' then pkg_uw.get_polno_from_index(pl_org_code,pl_ren_pl_index) else pl_no end) pl_no	, pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON, "
 				+ " (select nvl(ent_licence_no,' ')  from all_entity where ent_aent_code = pl_assr_aent_code and ent_code = pl_assr_ent_code) ent_licence_no,"
 				+ "pl_end_no,PL_CUR_CODE,PL_CUR_RATE,PL_FM_DT,PL_TO_DT , round(MONTHS_BETWEEN(PL_TO_DT,PL_FM_DT)) PL_DURATION, nvl(PKG_SYSTEM_ADMIN.get_column_value_three('ALL_ENTITY_ADDRESSES',"
 				+ "'ADDR_VALUE','ADDR_AENT_CODE','ADDR_ENT_CODE','ADDR_TYPE',PL_ASSR_AENT_CODE,PL_ASSR_ENT_CODE,'Physical Address'),'N/A') voie,"
@@ -2345,10 +2338,8 @@ public class SubmitMotorPolicy {
 				+ "                                                       PL_INDEX, "
 				+ "                                                       PL_END_INDEX, "
 				+ "                                                       PL_INT_ENT_CODE) "
-				+ "           ELSE NULL END) comm_rate from uw_policy where (CASE WHEN '"+endType+"' = '110' THEN pl_ren_pl_index ELSE pl_index END) = "
-				+ pl_index
-				+ " and (CASE WHEN '"+endType+"' = '110'  THEN pl_ren_pl_index ELSE pl_end_index END) = "
-				+ pl_end_index + " and pl_org_code = " + Settings.orgCode;
+				+ "           ELSE NULL END) comm_rate from uw_policy where pl_index = " + pl_index
+				+ " and pl_end_index = " + pl_end_index + " and pl_org_code = " + Settings.orgCode;
 		return headerQuery;
 
 	}
