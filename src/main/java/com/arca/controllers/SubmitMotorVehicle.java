@@ -27,6 +27,7 @@ public class SubmitMotorVehicle {
 		boolean firstRequest = true;
 		boolean firstEndRequest = true;
 		boolean cancelledCert = false;
+		boolean firstRenewalRequest = false;
 
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
@@ -108,6 +109,22 @@ public class SubmitMotorVehicle {
 
 						}
 					}
+
+					System.err.println("endType " + endType);
+					// check if this is the first request for this car and the endorsement is a
+					// renewal
+					if (endType.equals("110")) {
+						firstRenewalRequest = true;
+						try (Statement stmt2 = oraConn.createStatement();
+								ResultSet rs2 = stmt2.executeQuery("SELECT * FROM ARCA_REQUESTS WHERE AR_PL_INDEX = "
+										+ pl_index + " AND ar_risk_index = " + risk_index + " and AR_SUCCESS = 'Y'")) {
+							if (rs2.next()) {
+								firstRenewalRequest = false;
+
+							}
+						}
+
+					}
 					if (sourceTable.equals("UW") && endType.equals("110")) {
 
 						myResponse.addProperty("status", "-1");
@@ -122,7 +139,7 @@ public class SubmitMotorVehicle {
 						requestXML = buildPolicyXML(pl_index, pl_end_index, risk_index, rs.getString("correlation_id"),
 								rs.getString("document_id"), "000");
 
-					} else if (cancelledCert) {
+					} else if (cancelledCert || firstRenewalRequest) {
 						// Incorporation - Adding to sum insured
 						requestXML = buildIncopEndorsementXML(pl_index, pl_end_index, risk_index,
 								rs.getString("correlation_id"), rs.getString("document_id"));
@@ -133,10 +150,11 @@ public class SubmitMotorVehicle {
 						 */
 
 						// Remove this area
-						/*if (1 == 1) {
-
-							firstEndRequest = false;
-						}*/
+						/*
+						 * if (1 == 1) {
+						 * 
+						 * firstEndRequest = false; }
+						 */
 						if (!firstEndRequest) {
 
 							// Incorporation - Adding to sum insured
@@ -451,7 +469,8 @@ public class SubmitMotorVehicle {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -878,7 +897,8 @@ public class SubmitMotorVehicle {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -1272,7 +1292,8 @@ public class SubmitMotorVehicle {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -1667,7 +1688,8 @@ public class SubmitMotorVehicle {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
