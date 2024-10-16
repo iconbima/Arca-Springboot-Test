@@ -355,7 +355,7 @@ public class SubmitMotorPolicy {
 											+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A')\r\n"
 											+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A')\r\n"
 											+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A')\r\n"
-											+ "               ai_model from AI_VEHICLE a,uw_policy_risks b\r\n"
+											+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a,uw_policy_risks b\r\n"
 											+ "                where \r\n"
 											+ "                a.ai_risk_index = b.pl_risk_index\r\n"
 											+ "                and a.AI_PL_INDEX = b.PL_PL_INDEX \r\n"
@@ -366,7 +366,7 @@ public class SubmitMotorPolicy {
 							try (Statement stmt5 = oraConn.createStatement();
 
 									ResultSet vehicle = stmt5.executeQuery(
-											"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
+											"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT , nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 													+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 													+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
 													+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
@@ -401,7 +401,7 @@ public class SubmitMotorPolicy {
 											.addAttribute("nom", "PUF");
 
 									// Date of circulation
-									attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
+									attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
 
 									attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 											.addAttribute("nom", "USA");
@@ -425,7 +425,7 @@ public class SubmitMotorPolicy {
 											.addAttribute("nom", "ANF");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value"))
 											.addAttribute("nom", "VAL");
-									attributs.addElement("valeur").addText("false").addAttribute("nom", "REM");
+									attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 											.addAttribute("nom", "ENE");
 									attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -505,28 +505,6 @@ public class SubmitMotorPolicy {
 											double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex,
 													sourceTable);
 
-											if (iptPrem > 0) {
-
-												// System.out.println("TP : 12005-090003-AUTO-RC");
-
-												Element garantie = souscriptions.addElement("garantie")
-														.addAttribute("code", "12005-090003-AUTO-IOA");
-												garantie.addElement("dateEffet").addText(
-														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-												garantie.addElement("dateEcheance").addText(
-														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-												/*
-												 * attributs = garantie.addElement("attributs");
-												 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												 * .addAttribute("nom", "DUR");
-												 * attributs.addElement("valeur").addText("false").addAttribute("nom",
-												 * "FRT");
-												 */
-												garantie.addElement("prime")
-														.addText(String.format("%.0f", iptPrem * 100));
-
-											}
 											// System.err.println(rset.getString("sv_cc_code"));
 											if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 												// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -575,6 +553,28 @@ public class SubmitMotorPolicy {
 														"FRT");
 												garantie.addElement("prime").addText(String.format("%.0f",
 														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+
+											}
+											if (iptPrem > 0) {
+
+												// System.out.println("TP : 12005-090003-AUTO-RC");
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", "12005-090003-AUTO-IOA");
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+
+												/*
+												 * attributs = garantie.addElement("attributs");
+												 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+												 * .addAttribute("nom", "DUR");
+												 * attributs.addElement("valeur").addText("false").addAttribute("nom",
+												 * "FRT");
+												 */
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", iptPrem * 100));
 
 											}
 
@@ -939,7 +939,7 @@ public class SubmitMotorPolicy {
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A')\r\n"
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A')\r\n"
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A')\r\n"
-									+ "               ai_model from AI_VEHICLE a," + tableName + " b\r\n"
+									+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a," + tableName + " b\r\n"
 									+ "                where \r\n"
 									+ "                a.ai_risk_index = b.pl_risk_index\r\n"
 									+ "                and a.AI_PL_INDEX = b.PL_PL_INDEX \r\n"
@@ -952,7 +952,7 @@ public class SubmitMotorPolicy {
 					}
 					try (Statement stmt5 = oraConn.createStatement();
 							ResultSet vehicle = stmt5.executeQuery(
-									"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,"
+									"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT ,nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,"
 											+ "nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
@@ -989,7 +989,7 @@ public class SubmitMotorPolicy {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -1013,7 +1013,7 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText("false").addAttribute("nom", "REM");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -1087,25 +1087,6 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
-									if (iptPrem > 0) {
-
-										// System.out.println("TP : 12005-090003-AUTO-RC");
-
-										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-IOA");
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										/*
-										 * attributs = garantie.addElement("attributs");
-										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-										 * .addAttribute("nom", "DUR");
-										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
-
-									}
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -1153,6 +1134,25 @@ public class SubmitMotorPolicy {
 										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+
+									}
+									if (iptPrem > 0) {
+
+										// System.out.println("TP : 12005-090003-AUTO-RC");
+
+										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090003-AUTO-IOA");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 
@@ -1344,7 +1344,7 @@ public class SubmitMotorPolicy {
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A')\r\n"
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A')\r\n"
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A')\r\n"
-									+ "               ai_model from AI_VEHICLE a,uw_policy_risks b\r\n"
+									+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a,uw_policy_risks b\r\n"
 									+ "                where \r\n"
 									+ "                a.ai_risk_index = b.pl_risk_index\r\n"
 									+ "                and a.AI_PL_INDEX = b.PL_PL_INDEX \r\n"
@@ -1359,7 +1359,7 @@ public class SubmitMotorPolicy {
 					}
 					try (Statement stmt5 = oraConn.createStatement();
 							ResultSet vehicle = stmt5.executeQuery(
-									"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
+									"select ai_regn_no,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
 											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
@@ -1397,7 +1397,7 @@ public class SubmitMotorPolicy {
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -1421,7 +1421,7 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText("false").addAttribute("nom", "REM");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -1495,25 +1495,6 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
-									if (iptPrem > 0) {
-
-										// System.out.println("TP : 12005-090003-AUTO-RC");
-
-										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-IOA");
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										/*
-										 * attributs = garantie.addElement("attributs");
-										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-										 * .addAttribute("nom", "DUR");
-										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
-
-									}
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -1561,6 +1542,25 @@ public class SubmitMotorPolicy {
 										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+
+									}
+									if (iptPrem > 0) {
+
+										// System.out.println("TP : 12005-090003-AUTO-RC");
+
+										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090003-AUTO-IOA");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 
@@ -1944,7 +1944,7 @@ public class SubmitMotorPolicy {
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A')\r\n"
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A')\r\n"
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A')\r\n"
-									+ "               ai_model from AI_VEHICLE a,uw_policy_risks b\r\n"
+									+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a,uw_policy_risks b\r\n"
 									+ "                where \r\n"
 									+ "                a.ai_risk_index = b.pl_risk_index\r\n"
 									+ "                and a.AI_PL_INDEX = b.PL_PL_INDEX \r\n"
@@ -1955,7 +1955,7 @@ public class SubmitMotorPolicy {
 					}
 					try (Statement stmt5 = oraConn.createStatement();
 							ResultSet vehicle = stmt5.executeQuery(
-									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
+									"select ai_regn_no,pl_jurisdiction_area,ai_risk_index,nvl(ai_vehicle_use,'N/A') ai_vehicle_use,  TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT, nvl(ai_owner,'N/A')ai_owner,nvl(ai_cc,0) ai_cc, nvl(ai_cv,0) ai_cv , nvl(AI_MANUF_YEAR,2000)AI_MANUF_YEAR,nvl(ai_fuel_type,'N/A') ai_fuel_type,\r\n"
 											+ " case when ai_weight_uom = 'Kilograme' then ai_weight \r\n"
 											+ "when  ai_weight_uom = 'Tonnage' then ai_weight*1000\r\n"
 											+ "else  0 end weight,  ai_weight,nvl(ai_seating_capacity,1) ai_seating_capacity, nvl(ai_chassis_no,'N/A') ai_chassis_no, nvl(ai_fc_value,0)*100 ai_fc_value, nvl(ai_vehicle_type,'N/A') ai_vehicle_type, nvl(ai_vehicle_use,'N/A')\r\n"
@@ -1988,8 +1988,8 @@ public class SubmitMotorPolicy {
 							attributs.addElement("valeur").addText(vehicle.getString("ai_cv")).addAttribute("nom",
 									"PUF");
 
-							// Date of circulation
-							attributs.addElement("valeur").addText("2022-01-01").addAttribute("nom", "DMC");
+							// Date of circulation AI_REGN_DT
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
@@ -2013,7 +2013,7 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText("false").addAttribute("nom", "REM");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -2087,25 +2087,6 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
-									if (iptPrem > 0) {
-
-										// System.out.println("TP : 12005-090003-AUTO-RC");
-
-										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-IOA");
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										/*
-										 * attributs = garantie.addElement("attributs");
-										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-										 * .addAttribute("nom", "DUR");
-										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
-
-									}
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -2189,6 +2170,26 @@ public class SubmitMotorPolicy {
 										}
 
 									}
+
+									if (iptPrem > 0) {
+
+										// System.out.println("TP : 12005-090003-AUTO-RC");
+
+										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090003-AUTO-IOA");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+
+										/*
+										 * attributs = garantie.addElement("attributs");
+										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+										 * .addAttribute("nom", "DUR");
+										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
+										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+
+									}
 									// get the VAT ONLY for this risk
 
 									double riskTax = 0.0;
@@ -2210,7 +2211,7 @@ public class SubmitMotorPolicy {
 
 										}
 									}
-									Element taxeValeurAjoutee = souscriptions.addElement("taxeValeurAjoutee")
+									 souscriptions.addElement("taxeValeurAjoutee")
 											.addText(String.format("%.0f", riskTax * 100));
 
 								}
@@ -2236,7 +2237,7 @@ public class SubmitMotorPolicy {
 
 					ResultSet rset = stmt222.executeQuery("select * from ( " + query + ") \r\n"
 							+ "               UNPIVOT\r\n" + "(\r\n" + "  col_value\r\n"
-							+ "  FOR COL IN(AI_VEHICLE_USE,AI_CV,AI_MANUF_YEAR,AI_FUEL_TYPE,WEIGHT,AI_SEATING_CAPACITY,AI_CHASSIS_NO,AI_FC_VALUE,AI_BODY_TYPE,AI_MAKE,AI_MODEL)\r\n"
+							+ "  FOR COL IN(AI_VEHICLE_USE,AI_CV,AI_MANUF_YEAR,AI_FUEL_TYPE,WEIGHT,AI_SEATING_CAPACITY,AI_CHASSIS_NO,AI_FC_VALUE,AI_BODY_TYPE,AI_MAKE,AI_MODEL,AI_REGN_DT)\r\n"
 							+ ")");) {
 
 				if (rset.next()) {

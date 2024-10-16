@@ -74,6 +74,7 @@ public class Person {
 		this.immatriculation = immatriculation;
 		this.operation = operation;
 	}
+	
 
 	public Address getAddress() {
 		return address;

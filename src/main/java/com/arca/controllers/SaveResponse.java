@@ -261,7 +261,6 @@ public class SaveResponse {
 
 			String p_pl_index = "";
 			String p_end_index = "";
-			String p_user_code = "";
 			String pl_mc_code = "";
 			/* Selecting the policy and end index */
 			try (Connection oraConn = CreateConnection.getOraConn();
@@ -273,7 +272,6 @@ public class SaveResponse {
 
 					p_pl_index = rs.getString("AR_PL_INDEX");
 					p_end_index = rs.getString("AR_END_INDEX");
-					p_user_code = rs.getString("CREATED_BY");
 				}
 
 				/* Selecting the policy class */
