@@ -505,6 +505,8 @@ public class SubmitMotorPolicy {
 											double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex,
 													sourceTable);
 
+											double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+											double reducedPremium = 0.0;
 											// System.err.println(rset.getString("sv_cc_code"));
 											if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 												// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -536,23 +538,70 @@ public class SubmitMotorPolicy {
 												garantie.addElement("prime").addText(String.format("%.0f",
 														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 											} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
-												String cover = "12005-090003-AUTO-TR";
+												// System.out.println("COMP : 12005-090003-AUTO-RC");
+												for (int i = 1; i <= 7; i++) {
+													String cover = "";
+													switch (i) {
+													case 1:
+														cover = "12005-090003-AUTO-DR";
+														break;
+													case 2:
+														cover = "12005-090003-AUTO-DTA";
+														break;
+													case 3:
+														cover = "12005-090003-AUTO-INC";
+														break;
+													case 4:
+														cover = "12005-090003-AUTO-VA";
+														break;
+													case 5:
+														cover = "12005-090003-AUTO-BG";
+														break;
+													case 6:
+														cover = "12005-090003-AUTO-IOA";
+														break;
+													case 7:
+														cover = "12005-090003-AUTO-TR";
+														break;
 
-												// System.out.println("COMP : " + cover);
+													default:
+														break;
+													}
 
-												Element garantie = souscriptions.addElement("garantie")
-														.addAttribute("code", cover);
-												garantie.addElement("dateEffet").addText(
-														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-												garantie.addElement("dateEcheance").addText(
-														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-												attributs = garantie.addElement("attributs");
-												attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-														.addAttribute("nom", "DUR");
-												attributs.addElement("valeur").addText("false").addAttribute("nom",
-														"FRT");
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+													if (i == 7) {
+														// System.out.println("COMP : " + cover);
+
+														Element garantie = souscriptions.addElement("garantie")
+																.addAttribute("code", cover);
+														garantie.addElement("dateEffet").addText(
+																String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+														garantie.addElement("dateEcheance").addText(
+																String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+														attributs = garantie.addElement("attributs");
+														attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+																.addAttribute("nom", "DUR");
+														attributs.addElement("valeur").addText("false").addAttribute("nom",
+																"FRT");
+														garantie.addElement("prime").addText(String.format("%.0f",
+																(totalPremium-reducedPremium) * 100));
+													}
+													else {
+														double prem = Math.round(totalPremium*10/100);
+														System.err.println("reduced "+prem);
+
+														Element garantie = souscriptions.addElement("garantie")
+																.addAttribute("code", cover);
+														garantie.addElement("dateEffet").addText(
+																String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+														garantie.addElement("dateEcheance").addText(
+																String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
+														garantie.addElement("prime").addText(String.format("%.0f",
+																(prem) * 100));
+														reducedPremium +=  Math.round(totalPremium*10/100);
+														
+													}
+
+												}
 
 											}
 											if (iptPrem > 0) {
@@ -1087,6 +1136,8 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double reducedPremium = 0.0;
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -1118,22 +1169,70 @@ public class SubmitMotorPolicy {
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
-										String cover = "12005-090003-AUTO-TR";
+										// System.out.println("COMP : 12005-090003-AUTO-RC");
+										for (int i = 1; i <= 7; i++) {
+											String cover = "";
+											switch (i) {
+											case 1:
+												cover = "12005-090003-AUTO-DR";
+												break;
+											case 2:
+												cover = "12005-090003-AUTO-DTA";
+												break;
+											case 3:
+												cover = "12005-090003-AUTO-INC";
+												break;
+											case 4:
+												cover = "12005-090003-AUTO-VA";
+												break;
+											case 5:
+												cover = "12005-090003-AUTO-BG";
+												break;
+											case 6:
+												cover = "12005-090003-AUTO-IOA";
+												break;
+											case 7:
+												cover = "12005-090003-AUTO-TR";
+												break;
 
-										// System.out.println("COMP : " + cover);
+											default:
+												break;
+											}
 
-										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												cover);
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										garantie.addElement("prime").addText(String.format("%.0f",
-												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+											if (i == 7) {
+												// System.out.println("COMP : " + cover);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												attributs = garantie.addElement("attributs");
+												attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+														.addAttribute("nom", "DUR");
+												attributs.addElement("valeur").addText("false").addAttribute("nom",
+														"FRT");
+												garantie.addElement("prime").addText(String.format("%.0f",
+														(totalPremium-reducedPremium) * 100));
+											}
+											else {
+												double prem = Math.round(totalPremium*10/100);
+												System.err.println("reduced "+prem);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
+												garantie.addElement("prime").addText(String.format("%.0f",
+														(prem) * 100));
+												reducedPremium +=  Math.round(totalPremium*10/100);
+												
+											}
+
+										}
 
 									}
 									if (iptPrem > 0) {
@@ -1495,6 +1594,8 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double reducedPremium = 0.0;
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -1526,22 +1627,70 @@ public class SubmitMotorPolicy {
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
-										String cover = "12005-090003-AUTO-TR";
+										// System.out.println("COMP : 12005-090003-AUTO-RC");
+										for (int i = 1; i <= 7; i++) {
+											String cover = "";
+											switch (i) {
+											case 1:
+												cover = "12005-090003-AUTO-DR";
+												break;
+											case 2:
+												cover = "12005-090003-AUTO-DTA";
+												break;
+											case 3:
+												cover = "12005-090003-AUTO-INC";
+												break;
+											case 4:
+												cover = "12005-090003-AUTO-VA";
+												break;
+											case 5:
+												cover = "12005-090003-AUTO-BG";
+												break;
+											case 6:
+												cover = "12005-090003-AUTO-IOA";
+												break;
+											case 7:
+												cover = "12005-090003-AUTO-TR";
+												break;
 
-										// System.out.println("COMP : " + cover);
+											default:
+												break;
+											}
 
-										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												cover);
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-										attributs = garantie.addElement("attributs");
-										attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
-												.addAttribute("nom", "DUR");
-										attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										garantie.addElement("prime").addText(String.format("%.0f",
-												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+											if (i == 7) {
+												// System.out.println("COMP : " + cover);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												attributs = garantie.addElement("attributs");
+												attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+														.addAttribute("nom", "DUR");
+												attributs.addElement("valeur").addText("false").addAttribute("nom",
+														"FRT");
+												garantie.addElement("prime").addText(String.format("%.0f",
+														(totalPremium-reducedPremium) * 100));
+											}
+											else {
+												double prem = Math.round(totalPremium*10/100);
+												System.err.println("reduced "+prem);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
+												garantie.addElement("prime").addText(String.format("%.0f",
+														(prem) * 100));
+												reducedPremium +=  Math.round(totalPremium*10/100);
+												
+											}
+
+										}
 
 									}
 									if (iptPrem > 0) {
@@ -2087,6 +2236,8 @@ public class SubmitMotorPolicy {
 											rset.getString("sv_cc_code"), sourceTable);
 									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
 
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double reducedPremium = 0.0;
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -2163,8 +2314,22 @@ public class SubmitMotorPolicy {
 												attributs.addElement("valeur").addText("false").addAttribute("nom",
 														"FRT");
 												garantie.addElement("prime").addText(String.format("%.0f",
-														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
+														(totalPremium-reducedPremium) * 100));
+											}
+											else {
+												double prem = Math.round(totalPremium*10/100);
+												System.err.println("reduced "+prem);
 
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
+												garantie.addElement("prime").addText(String.format("%.0f",
+														(prem) * 100));
+												reducedPremium +=  Math.round(totalPremium*10/100);
+												
 											}
 
 										}

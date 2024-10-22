@@ -42,6 +42,10 @@ public class CreateConnection {
 
 			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.50.10:1527:bima19c", "ICON", "B1MA");
 
+		}else if (ArcaSpringbootApplication.ENVIRONMENT.equals("LOCAL")) {
+
+			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@127.0.0.1:1521:bima19c", "ICON", "B1MA");
+
 		}else {
 
 			oraConn = DriverManager.getConnection("jdbc:oracle:thin:@192.168.50.10:1527:bima19c", "ICON", "B1MA");
