@@ -96,7 +96,7 @@ public class SaveResponse {
 	 * 
 	 */
 	public static void updateCertificate(String envId, String docId, String riskIndex, String certNo,
-			String statusCode) {
+			String statusCode,String certUrl) {
 
 		try {
 
@@ -133,11 +133,12 @@ public class SaveResponse {
 					//System.out.println("Saving the response "+certNo+ " env "+envId+" docId "+docId);
 					/* Update the request row with the cert no */
 					try (PreparedStatement update = oraConn.prepareStatement(
-							"update arca_requests set ar_cert_no = ?  where   AR_ENVELOPE_ID = ?  and AR_DOCUMENT_ID = ?  ")) {
+							"update arca_requests set ar_cert_no = ?, ar_cert_url = ?  where   AR_ENVELOPE_ID = ?  and AR_DOCUMENT_ID = ?  ")) {
 
 						update.setString(1, certNo);
-						update.setString(2, envId);
-						update.setString(3, docId);
+						update.setString(2, certUrl);
+						update.setString(3, envId);
+						update.setString(4, docId);
 						update.execute();
 
 					}

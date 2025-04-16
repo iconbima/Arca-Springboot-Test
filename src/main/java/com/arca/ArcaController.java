@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.arca.config.Settings;
+import com.arca.controllers.Base64DecodePdf;
 import com.arca.controllers.CreateConnection;
 import com.arca.controllers.GetConfiguration;
 import com.arca.controllers.SubmitGITPolicy;
@@ -30,6 +31,7 @@ public class ArcaController {
 	public static String HOST = "./";
 	public static String ADDRESS = "./";
 	public static String BOOK = "-1";
+	public static String DOWNLOAD_URL = "-1";
 
 	public ArcaController() {
 		try {
@@ -57,6 +59,8 @@ public class ArcaController {
 						ADDRESS = (rs.getString("sys_name"));
 					}else if (rs.getString("sys_code").equals("ARCA_BOOK")) {
 						BOOK = (rs.getString("sys_name"));
+					}else if (rs.getString("sys_code").equals("ARCA_DOWNLOAD_URL")) {
+						DOWNLOAD_URL = (rs.getString("sys_name"));
 					}
 
 				}
@@ -166,8 +170,9 @@ public class ArcaController {
 	@RequestMapping(value = "/cancelArcaCert", method = RequestMethod.POST)
 	public String cancelCert(@RequestBody CancelCert cancelCert) throws Exception {
 		String response = "";
-
+		
 		SubmitGITPolicy sp = new SubmitGITPolicy();
+//		String certNo = cancelCert.getCertNo().contains("_")?cancelCert.getCertNo().split("_")[1]:cancelCert.getCertNo();
 		response = sp.cancelCertificate(cancelCert.getCertNo(), cancelCert.getCancelReason(), cancelCert.getUserCode());
 
 		return response;
@@ -178,11 +183,10 @@ public class ArcaController {
 	 * This will return the codes used in ARCA i.e 1. Country 2. Currency 3.
 	 * Administrative subdivisions of the DRC 4. Error lists
 	 */
-	@GetMapping(path = "getCoding")
-	public String getCoding() throws Exception {
+	@GetMapping(path = "getCoding/{code}")
+	public String getCoding(@PathVariable("code") String code) throws Exception {
 		GetConfiguration gc = new GetConfiguration();
-		return gc.sendConfigRequest("_codification");
-
+		return gc.sendConfigRequest(code);
 	}
 
 	/*
@@ -224,5 +228,20 @@ public class ArcaController {
 		return gc.sendConfigRequest("_erreur");
 
 	}
+	/*
+	 * This will return the ARCA error codes
+	 */
+	@GetMapping(path = "downloadCert/{certNo}")
+	public String testCert(@PathVariable("certNo") String certNo) throws Exception {
+		Base64DecodePdf certs = new Base64DecodePdf();
+		if(certNo.contains("_")) {
+			certNo = certNo.split("_")[1];
+		}
+		String certUrl = DOWNLOAD_URL+certNo;
+		System.out.println("Downloading cert from url "+certUrl);
+		return String.valueOf(certs.saveCertFromUrl(certNo,certUrl));
+
+	}
+	
 
 }

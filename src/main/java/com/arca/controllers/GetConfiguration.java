@@ -32,7 +32,7 @@ public class GetConfiguration {
 
 	}
 
-	public  String sendConfigRequest(String requestCode) {
+	public String sendConfigRequest(String requestCode) {
 
 		JsonObject myResponse = new JsonObject();
 
@@ -40,7 +40,7 @@ public class GetConfiguration {
 			try (Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
-							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
+							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID),1) document_id from ARCA_REQUESTS")) {
 				while (rs.next()) {
 
 					RabbitMQSender sender = new RabbitMQSender();
@@ -60,8 +60,7 @@ public class GetConfiguration {
 					if (sender.sendMessage(requestXML, rs.getString("correlation_id"))) {
 						PreparedStatement prepareStatement = oraConn.prepareStatement(
 								"INSERT INTO ARCA_REQUESTS (AR_PL_INDEX, AR_END_INDEX, AR_ENVELOPE_ID, AR_DOCUMENT_ID, AR_REQUEST_XML,CREATED_BY,"
-								+ "AR_REQUEST_TYPE )"
-										+ " VALUES (?, ?, ?, ?, ?, ?, ?)");
+										+ "AR_REQUEST_TYPE )" + " VALUES (?, ?, ?, ?, ?, ?, ?)");
 						prepareStatement.setInt(1, 0);
 						prepareStatement.setInt(2, getCodificationNumber(requestCode));
 						prepareStatement.setString(3, rs.getString("correlation_id"));
@@ -103,7 +102,7 @@ public class GetConfiguration {
 		return myResponse.get("statusDescription").toString();
 	}
 
-	public  String buildConfigRequest(String requestCode, String correlationId, String documentID) {
+	public String buildConfigRequest(String requestCode, String correlationId, String documentID) {
 
 		Document policyXML = DocumentHelper.createDocument();
 		try {
@@ -112,7 +111,7 @@ public class GetConfiguration {
 					.addAttribute("identifiant", ArcaController.USERNAME)
 					.addAttribute("motDePasse", ArcaController.PASSWORD)
 					.addAttribute("timestamp", SubmitMotorPolicy.getCurrentUtcTime()).addElement("documentation")
-					.addAttribute("id", String.valueOf(documentID)).addAttribute("idCode", requestCode);
+					.addAttribute("idCode", requestCode);
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -123,7 +122,7 @@ public class GetConfiguration {
 
 	}
 
-	private  int getCodificationNumber(String requestCode) {
+	private int getCodificationNumber(String requestCode) {
 		switch (requestCode) {
 		case "_pays":
 			return 0;
@@ -135,11 +134,23 @@ public class GetConfiguration {
 			return 3;
 		case "_categorie":
 			return 4;
-		case "_codification":
+		case "_codificationVehicule":
 			return 5;
-		case "_listeProduits":
+		case "_codificationUsageVehicule":
 			return 6;
-			
+		case "_codificationEnergieVehicule":
+			return 7;
+		case "_codificationTypeCarosserie":
+			return 8;
+		case "_codificationTypeMarchandise":
+			return 9;
+		case "_codificationMoyenTransport":
+			return 10;
+		case "_codificationMotifAnnulation":
+			return 11;
+		case "_listeProduits":
+			return 12;
+
 		default:
 			return -1;
 		}

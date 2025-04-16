@@ -1,7 +1,4 @@
 package com.arca.controllers;
-
-import java.util.*;
-import java.lang.*;
 public class Solution {
 	
 	public static void main(String[] args) {

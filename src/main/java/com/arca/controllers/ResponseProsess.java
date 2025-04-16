@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.Statement;
 import java.util.List;
 
 import org.dom4j.Document;
@@ -31,7 +33,9 @@ public class ResponseProsess {
 		String statusCode = "";
 		String certNo = "";
 		String riskIndex = "";
+		String certUrl = "";
 		String certBase64 = "";
+		
 		
 
 		try {
@@ -109,7 +113,7 @@ public class ResponseProsess {
 								break;
 							}
 
-							SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, response, "01");
+							SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, response, "01",null);
 							statusCode = "01";
 							break;
 						case "OK":
@@ -122,15 +126,29 @@ public class ResponseProsess {
 								Element current = (Element) certNode;
 								certNo = certNode.valueOf("@numero");
 								riskIndex = certNode.valueOf("@idBien");
-								certBase64 = current.getText();
+ 								certUrl = current.getText();
+ 								//certBase64 = current.getText();
 								Base64DecodePdf bdf = new Base64DecodePdf();
 
+								/* This was phased out by ARCA, certs are now URLs
 								if (bdf.decodeString(certNo, certBase64)) {
 
 									response = ("Certificate Saved");
 									statusCode = "00";
 
 									SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo, "00");
+								} else {
+
+									response = ("Certificate Could not be saved");
+									statusCode = "01";
+								}
+								*/
+								if (bdf.saveCertFromUrl(certNo, certUrl)) {
+
+									response = ("Certificate Saved");
+									statusCode = "00";
+
+									SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo, "00",certUrl);
 								} else {
 
 									response = ("Certificate Could not be saved");
@@ -201,7 +219,22 @@ public class ResponseProsess {
 								update.execute();
 
 							}
-							SaveResponse.updateCancelledCertificate(envelopeID, "0", riskIndex, certNo, "01",newCert);
+							String dbCertNo = "-1";
+							
+
+							try (Connection oraConn = CreateConnection.getOraConn();
+									Statement stmt = oraConn.createStatement();
+
+									ResultSet rs = stmt.executeQuery("select ar_cert_no  from ARCA_REQUESTS"
+											+ " where AR_ENVELOPE_ID = " + envelopeID + " AND  AR_REQUEST_TYPE = 'CANCELLATION' ")) {
+
+								dbCertNo = rs.getString("ar_cert_no");
+
+							}
+							
+							dbCertNo = dbCertNo.equalsIgnoreCase("-1")?certNo:dbCertNo;
+							
+							SaveResponse.updateCancelledCertificate(envelopeID, "0", riskIndex, dbCertNo, "01",newCert);
 
 
 						} catch (Exception e) {

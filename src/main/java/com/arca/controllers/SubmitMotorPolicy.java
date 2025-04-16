@@ -207,15 +207,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
-
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -252,24 +251,50 @@ public class SubmitMotorPolicy {
 					production.addElement("dateEcheance").addText(String.valueOf(rs.getDate("PL_TO_DT").toLocalDate()));
 
 					Element souscripteur = production.addElement("souscripteur");
-					// Check this section for static values
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout");
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
-
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone"
+											+ " from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
-						while (client.next()) { // the prenom should be the last name, then nom should be the rest of
-												// the name
+						while (client.next()) {
+// Check this section for static values
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
+							// the prenom should be the last name, then nom should be the rest of
+							// the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
 							// Get the last name
@@ -283,10 +308,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -381,6 +412,12 @@ public class SubmitMotorPolicy {
 													+ "                and a.AI_ORG_CODE = " + Settings.orgCode
 													+ " \r\n" + "              and AI_PL_INDEX = " + pl_index)) {
 								while (vehicle.next()) {
+									String validateMakeModel = SubmitMotorVehicle.validateMakeModel(
+											vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+									if (!validateMakeModel.equals("Complete")) {
+										return validateMakeModel;
+									}
+
 									String riskIndex = vehicle.getString("ai_risk_index");
 
 									Element objet = production.addElement("objet")
@@ -394,17 +431,20 @@ public class SubmitMotorPolicy {
 
 									attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
 											.addAttribute("nom", "TYP");
-									attributs.addElement("valeur").addText(vehicle.getString("ai_make").split("-")[0])
+									attributs.addElement("valeur").addText(vehicle.getString("ai_make"))
 											.addAttribute("nom", "MAR");
 									// Puissance fiscale
 									attributs.addElement("valeur").addText(vehicle.getString("ai_cv"))
 											.addAttribute("nom", "PUF");
 
 									// Date of circulation
-									attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+									attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT"))
+											.addAttribute("nom", "DMC");
 
 									attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 											.addAttribute("nom", "USA");
+									attributs.addElement("valeur").addText(vehicle.getString("ai_cc"))
+											.addAttribute("nom", "CYL");
 
 									attributs.addElement("valeur").addText("CD").addAttribute("nom", "PAY");
 
@@ -413,19 +453,27 @@ public class SubmitMotorPolicy {
 											.addAttribute("nom", "CAR");
 									attributs.addElement("valeur").addText(vehicle.getString("weight"))
 											.addAttribute("nom", "PTA");
+									if ("CAT04 CAT05".contains(vehicle.getString("ai_vehicle_use")))
+										attributs.addElement("valeur").addText(vehicle.getString("weight"))
+												.addAttribute("nom", "PAV");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_seating_capacity"))
 											.addAttribute("nom", "PLA");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_regn_no"))
 											.addAttribute("nom", "IMM");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_chassis_no"))
 											.addAttribute("nom", "CHA");
-									attributs.addElement("valeur").addText(vehicle.getString("ai_model").split("-")[0])
+									attributs.addElement("valeur")
+											.addText(vehicle.getString("ai_model").contains("-")
+													? vehicle.getString("ai_model").split("-")[1]
+													: vehicle.getString("ai_model"))
 											.addAttribute("nom", "MOD");
 									attributs.addElement("valeur").addText(vehicle.getString("AI_MANUF_YEAR"))
 											.addAttribute("nom", "ANF");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value"))
 											.addAttribute("nom", "VAL");
-									attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
+									attributs.addElement("valeur")
+											.addText(vehicle.getString("ai_body_type").equals("4") ? "true" : "false")
+											.addAttribute("nom", "REM");
 									attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 											.addAttribute("nom", "ENE");
 									attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -500,19 +548,30 @@ public class SubmitMotorPolicy {
 											// we need to check for IPT cover here, if it is there submit it and reduce
 											// the
 											// total premium for main cover
-											double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
+											double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
 													rset.getString("sv_cc_code"), sourceTable);
-											double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex,
-													sourceTable);
-
-											double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+											double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index,
+													pl_end_index, riskIndex, sourceTable); 
+											double tpPrem = SubmitMotorPolicy.getTpPremium(
+													vehicle.getString("ai_vehicle_type"), vehicle.getInt("ai_cv"),vehicle.getInt("AI_SEATING_CAPACITY"),vehicle.getInt("ai_weight"),vehicle.getInt("ai_cc"));
+											double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover
+													- tpPrem;
 											double reducedPremium = 0.0;
+											System.err.println("totalPremium " + (totalPremium + tpPrem));
+											if (tpPrem == 0 && "0700 0800".contains(rset.getString("sv_cc_code"))) {
+
+												return "Error. Cannot TP Tarrif for Vehicle Type "
+														+ vehicle.getString("ai_vehicle_type") + " and CV "
+														+ vehicle.getString("ai_cv") + " Contact IT";
+
+											}
+
 											// System.err.println(rset.getString("sv_cc_code"));
 											if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 												// System.out.println("TP : 12005-090003-AUTO-RC");
 
 												Element garantie = souscriptions.addElement("garantie")
-														.addAttribute("code", "12005-090003-AUTO-DR");
+														.addAttribute("code", "12005-090003-AUTO-RC");
 												garantie.addElement("dateEffet").addText(
 														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 												garantie.addElement("dateEcheance").addText(
@@ -534,12 +593,11 @@ public class SubmitMotorPolicy {
 														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 												garantie.addElement("dateEcheance").addText(
 														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
 												garantie.addElement("prime").addText(String.format("%.0f",
 														(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 											} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
 												// System.out.println("COMP : 12005-090003-AUTO-RC");
-												for (int i = 1; i <= 7; i++) {
+												for (int i = 1; i <= 8; i++) {
 													String cover = "";
 													switch (i) {
 													case 1:
@@ -563,6 +621,9 @@ public class SubmitMotorPolicy {
 													case 7:
 														cover = "12005-090003-AUTO-TR";
 														break;
+													case 8:
+														cover = "12005-090003-AUTO-RC";
+														break;
 
 													default:
 														break;
@@ -570,7 +631,8 @@ public class SubmitMotorPolicy {
 
 													if (i == 7) {
 														// System.out.println("COMP : " + cover);
-
+														System.err.println(
+																"comp prem " + (totalPremium - reducedPremium));
 														Element garantie = souscriptions.addElement("garantie")
 																.addAttribute("code", cover);
 														garantie.addElement("dateEffet").addText(
@@ -578,27 +640,42 @@ public class SubmitMotorPolicy {
 														garantie.addElement("dateEcheance").addText(
 																String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 														attributs = garantie.addElement("attributs");
-														attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
+														attributs.addElement("valeur")
+																.addText(rs.getString("PL_DURATION"))
 																.addAttribute("nom", "DUR");
-														attributs.addElement("valeur").addText("false").addAttribute("nom",
-																"FRT");
+														attributs.addElement("valeur").addText("false")
+																.addAttribute("nom", "FRT");
 														garantie.addElement("prime").addText(String.format("%.0f",
-																(totalPremium-reducedPremium) * 100));
-													}
-													else {
-														double prem = Math.round(totalPremium*10/100);
-														System.err.println("reduced "+prem);
+																(totalPremium - reducedPremium) * 100));
+													} else if (i == 8) {
+
+														System.err.println("tp prem" + tpPrem);
 
 														Element garantie = souscriptions.addElement("garantie")
 																.addAttribute("code", cover);
 														garantie.addElement("dateEffet").addText(
 																String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 														garantie.addElement("dateEcheance").addText(
-																String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
-														garantie.addElement("prime").addText(String.format("%.0f",
-																(prem) * 100));
-														reducedPremium +=  Math.round(totalPremium*10/100);
-														
+																String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+														garantie.addElement("prime")
+																.addText(String.format("%.0f", (tpPrem) * 100));
+
+													}
+
+													else {
+														double prem = Math.round((totalPremium) * 10 / 100);
+														System.err.println("reduced " + prem);
+
+														Element garantie = souscriptions.addElement("garantie")
+																.addAttribute("code", cover);
+														garantie.addElement("dateEffet").addText(
+																String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+														garantie.addElement("dateEcheance").addText(
+																String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+														garantie.addElement("prime")
+																.addText(String.format("%.0f", (prem) * 100));
+														reducedPremium += Math.round(totalPremium * 10 / 100);
+
 													}
 
 												}
@@ -654,15 +731,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
-
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -705,19 +781,42 @@ public class SubmitMotorPolicy {
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
 						while (client.next()) {
 
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
 							Element personne = souscripteur.addElement("personne")
 									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
 									.addAttribute("immatriculation", "non assujetti")
-									.addAttribute("paysEtablissement", "CD").addAttribute("personneMorale", "false")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
 									.addAttribute("operation", "ajout");
-							Element adresse = personne.addElement("adresse");
-							adresse.addElement("voie").addText(rs.getString("voie"));
-							adresse.addElement("commune").addAttribute("code", "C/Gombe");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
 							// the prenom should be the last name, then nom should be the rest of the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
@@ -732,10 +831,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -817,15 +922,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
-
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -858,25 +962,50 @@ public class SubmitMotorPolicy {
 
 					Element souscripteur = production.addElement("souscripteur");
 					// Check this section for static values
-					// creating a new person
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout");
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
 
 					// Adding person details
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
-						while (client.next()) { // the prenom should be the last name, then nom should be the rest of
-												// the name
+						while (client.next()) {// creating a new person
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
+							// the prenom should be the last name, then nom should be the rest of
+							// the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
 							// Get the last name
@@ -890,10 +1019,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -988,8 +1123,8 @@ public class SubmitMotorPolicy {
 									+ "               ai_vehicle_use, nvl( pkg_system_admin.get_system_desc ('AD_VHBODY_TYPE', ai_body_type),'N/A')\r\n"
 									+ "               ai_body_type, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_make),'N/A')\r\n"
 									+ "               ai_make, nvl(pkg_system_admin.get_system_desc ('AD_VEHICLE_MAKE', ai_model),'N/A')\r\n"
-									+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a," + tableName + " b\r\n"
-									+ "                where \r\n"
+									+ "               ai_model,TO_CHAR(A.AI_REGN_DT,'RRRR-MM-DD') AI_REGN_DT from AI_VEHICLE a,"
+									+ tableName + " b\r\n" + "                where \r\n"
 									+ "                a.ai_risk_index = b.pl_risk_index\r\n"
 									+ "                and a.AI_PL_INDEX = b.PL_PL_INDEX \r\n"
 									+ "              and AI_PL_INDEX = " + pl_index + "\r\n"
@@ -1019,6 +1154,13 @@ public class SubmitMotorPolicy {
 											+ "              and pl_status = 'Deleted'\r\n"
 											+ "              and  pl_end_index = " + pl_end_index)) {
 						while (vehicle.next()) {
+
+							String validateMakeModel = SubmitMotorVehicle
+									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+							if (!validateMakeModel.equals("Complete")) {
+								return validateMakeModel;
+							}
+
 							String riskIndex = vehicle.getString("ai_risk_index");
 
 							Element objet = production.addElement("objet").addAttribute("code", "12005-090003-AUTO")
@@ -1031,17 +1173,20 @@ public class SubmitMotorPolicy {
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
 									.addAttribute("nom", "TYP");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_make").split("-")[0])
-									.addAttribute("nom", "MAR");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_make")).addAttribute("nom",
+									"MAR");
 							// Puissance fiscale
 							attributs.addElement("valeur").addText(vehicle.getString("ai_cv")).addAttribute("nom",
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_cc")).addAttribute("nom",
+									"CYL");
 
 							attributs.addElement("valeur").addText("CD").addAttribute("nom", "PAY");
 
@@ -1050,19 +1195,27 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");
+							if ("CAT04 CAT05".contains(vehicle.getString("ai_vehicle_use")))
+								attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
+										"PAV");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_seating_capacity"))
 									.addAttribute("nom", "PLA");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_regn_no")).addAttribute("nom",
 									"IMM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_chassis_no"))
 									.addAttribute("nom", "CHA");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_model").split("-")[0])
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_model").contains("-")
+											? vehicle.getString("ai_model").split("-")[1]
+											: vehicle.getString("ai_model"))
 									.addAttribute("nom", "MOD");
 							attributs.addElement("valeur").addText(vehicle.getString("AI_MANUF_YEAR"))
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_body_type").equals("4") ? "true" : "false")
+									.addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -1132,18 +1285,29 @@ public class SubmitMotorPolicy {
 								while (rset.next()) {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
-									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
+									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
 											rset.getString("sv_cc_code"), sourceTable);
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
-
-									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
+											riskIndex, sourceTable);
+									double tpPrem = SubmitMotorPolicy.getTpPremium(
+											vehicle.getString("ai_vehicle_type"), vehicle.getInt("ai_cv"),vehicle.getInt("AI_SEATING_CAPACITY"),vehicle.getInt("ai_weight"),vehicle.getInt("ai_cc"));
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover - tpPrem;
 									double reducedPremium = 0.0;
+									System.err.println("totalPremium " + (totalPremium + tpPrem));
+									if (tpPrem == 0 && "0700 0800".contains(rset.getString("sv_cc_code"))) {
+
+										return "Error. Cannot TP Tarrif for Vehicle Type "
+												+ vehicle.getString("ai_vehicle_type") + " and CV "
+												+ vehicle.getString("ai_cv") + " Contact IT";
+
+									}
+
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
 
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-DR");
+												"12005-090003-AUTO-RC");
 										garantie.addElement("dateEffet")
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
@@ -1164,13 +1328,11 @@ public class SubmitMotorPolicy {
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-							 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("COMP : 12005-090003-AUTO-RC");
-										for (int i = 1; i <= 7; i++) {
+										for (int i = 1; i <= 8; i++) {
 											String cover = "";
 											switch (i) {
 											case 1:
@@ -1194,6 +1356,9 @@ public class SubmitMotorPolicy {
 											case 7:
 												cover = "12005-090003-AUTO-TR";
 												break;
+											case 8:
+												cover = "12005-090003-AUTO-RC";
+												break;
 
 											default:
 												break;
@@ -1201,7 +1366,7 @@ public class SubmitMotorPolicy {
 
 											if (i == 7) {
 												// System.out.println("COMP : " + cover);
-
+												System.err.println("comp prem " + (totalPremium - reducedPremium));
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
@@ -1213,23 +1378,37 @@ public class SubmitMotorPolicy {
 														.addAttribute("nom", "DUR");
 												attributs.addElement("valeur").addText("false").addAttribute("nom",
 														"FRT");
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(totalPremium-reducedPremium) * 100));
-											}
-											else {
-												double prem = Math.round(totalPremium*10/100);
-												System.err.println("reduced "+prem);
+												garantie.addElement("prime").addText(
+														String.format("%.0f", (totalPremium - reducedPremium) * 100));
+											} else if (i == 8) {
+
+												System.err.println("tp prem" + tpPrem);
 
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
 														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 												garantie.addElement("dateEcheance").addText(
-														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(prem) * 100));
-												reducedPremium +=  Math.round(totalPremium*10/100);
-												
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (tpPrem) * 100));
+
+											}
+
+											else {
+												double prem = Math.round((totalPremium) * 10 / 100);
+												System.err.println("reduced " + prem);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (prem) * 100));
+												reducedPremium += Math.round(totalPremium * 10 / 100);
+
 											}
 
 										}
@@ -1251,7 +1430,8 @@ public class SubmitMotorPolicy {
 										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
 										 * .addAttribute("nom", "DUR");
 										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										 */
+										garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 
@@ -1278,14 +1458,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -1328,26 +1508,51 @@ public class SubmitMotorPolicy {
 					production.addElement("dateEcheance").addText(String.valueOf(rs.getDate("PL_TO_DT").toLocalDate()));
 
 					Element souscripteur = production.addElement("souscripteur");
-					// Check this section for static values
-					// creating a new person
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout");
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
 
 					// Adding person details
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
-						while (client.next()) { // the prenom should be the last name, then nom should be the rest of
-												// the name
+						while (client.next()) {// Check this section for static values
+							// creating a new person
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
+							// the prenom should be the last name, then nom should be the rest of
+							// the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
 							// Get the last name
@@ -1361,10 +1566,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -1477,6 +1688,13 @@ public class SubmitMotorPolicy {
 											+ "              (select pe_end_index from uw_endorsements where pe_pl_index = "
 											+ pl_index + " and pe_order = " + (pe_order - 1) + "))")) {
 						while (vehicle.next()) {
+
+							String validateMakeModel = SubmitMotorVehicle
+									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+							if (!validateMakeModel.equals("Complete")) {
+								return validateMakeModel;
+							}
+
 							String riskIndex = vehicle.getString("ai_risk_index");
 
 							Element objet = production.addElement("objet").addAttribute("code", "12005-090003-AUTO")
@@ -1489,17 +1707,20 @@ public class SubmitMotorPolicy {
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
 									.addAttribute("nom", "TYP");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_make").split("-")[0])
-									.addAttribute("nom", "MAR");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_make")).addAttribute("nom",
+									"MAR");
 							// Puissance fiscale
 							attributs.addElement("valeur").addText(vehicle.getString("ai_cv")).addAttribute("nom",
 									"PUF");
 
 							// Date of circulation
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_cc")).addAttribute("nom",
+									"CYL");
 
 							attributs.addElement("valeur").addText("CD").addAttribute("nom", "PAY");
 
@@ -1508,19 +1729,27 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");
+							if ("CAT04 CAT05".contains(vehicle.getString("ai_vehicle_use")))
+								attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
+										"PAV");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_seating_capacity"))
 									.addAttribute("nom", "PLA");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_regn_no")).addAttribute("nom",
 									"IMM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_chassis_no"))
 									.addAttribute("nom", "CHA");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_model").split("-")[0])
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_model").contains("-")
+											? vehicle.getString("ai_model").split("-")[1]
+											: vehicle.getString("ai_model"))
 									.addAttribute("nom", "MOD");
 							attributs.addElement("valeur").addText(vehicle.getString("AI_MANUF_YEAR"))
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_body_type").equals("4") ? "true" : "false")
+									.addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -1590,18 +1819,29 @@ public class SubmitMotorPolicy {
 								while (rset.next()) {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
-									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
+									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
 											rset.getString("sv_cc_code"), sourceTable);
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
-
-									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
+											riskIndex, sourceTable);
+									double tpPrem = SubmitMotorPolicy.getTpPremium(
+											vehicle.getString("ai_vehicle_type"), vehicle.getInt("ai_cv"),vehicle.getInt("AI_SEATING_CAPACITY"),vehicle.getInt("ai_weight"),vehicle.getInt("ai_cc"));
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover - tpPrem;
 									double reducedPremium = 0.0;
+									System.err.println("totalPremium " + (totalPremium + tpPrem));
+									if (tpPrem == 0 && "0700 0800".contains(rset.getString("sv_cc_code"))) {
+
+										return "Error. Cannot TP Tarrif for Vehicle Type "
+												+ vehicle.getString("ai_vehicle_type") + " and CV "
+												+ vehicle.getString("ai_cv") + " Contact IT";
+
+									}
+
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
 
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-DR");
+												"12005-090003-AUTO-RC");
 										garantie.addElement("dateEffet")
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
@@ -1622,13 +1862,11 @@ public class SubmitMotorPolicy {
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-										
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("COMP : 12005-090003-AUTO-RC");
-										for (int i = 1; i <= 7; i++) {
+										for (int i = 1; i <= 8; i++) {
 											String cover = "";
 											switch (i) {
 											case 1:
@@ -1652,6 +1890,9 @@ public class SubmitMotorPolicy {
 											case 7:
 												cover = "12005-090003-AUTO-TR";
 												break;
+											case 8:
+												cover = "12005-090003-AUTO-RC";
+												break;
 
 											default:
 												break;
@@ -1659,7 +1900,7 @@ public class SubmitMotorPolicy {
 
 											if (i == 7) {
 												// System.out.println("COMP : " + cover);
-
+												System.err.println("comp prem " + (totalPremium - reducedPremium));
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
@@ -1671,23 +1912,37 @@ public class SubmitMotorPolicy {
 														.addAttribute("nom", "DUR");
 												attributs.addElement("valeur").addText("false").addAttribute("nom",
 														"FRT");
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(totalPremium-reducedPremium) * 100));
-											}
-											else {
-												double prem = Math.round(totalPremium*10/100);
-												System.err.println("reduced "+prem);
+												garantie.addElement("prime").addText(
+														String.format("%.0f", (totalPremium - reducedPremium) * 100));
+											} else if (i == 8) {
+
+												System.err.println("tp prem" + tpPrem);
 
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
 														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 												garantie.addElement("dateEcheance").addText(
-														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(prem) * 100));
-												reducedPremium +=  Math.round(totalPremium*10/100);
-												
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (tpPrem) * 100));
+
+											}
+
+											else {
+												double prem = Math.round((totalPremium) * 10 / 100);
+												System.err.println("reduced " + prem);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (prem) * 100));
+												reducedPremium += Math.round(totalPremium * 10 / 100);
+
 											}
 
 										}
@@ -1709,7 +1964,8 @@ public class SubmitMotorPolicy {
 										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
 										 * .addAttribute("nom", "DUR");
 										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										 */
+										garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
 
@@ -1736,14 +1992,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -1777,23 +2033,47 @@ public class SubmitMotorPolicy {
 					production.addElement("dateEcheance").addText(String.valueOf(rs.getDate("PL_TO_DT").toLocalDate()));
 
 					Element souscripteur = production.addElement("souscripteur");
-					// Check this section for static values
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout");
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
 
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
-						while (client.next()) {
+						while (client.next()) {// Check this section for static values
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
 							// the prenom should be the last name, then nom should be the rest of the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
@@ -1808,10 +2088,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -1935,15 +2221,14 @@ public class SubmitMotorPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
-
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -1966,24 +2251,48 @@ public class SubmitMotorPolicy {
 					production.addElement("dateEcheance").addText(String.valueOf(rs.getDate("PL_TO_DT").toLocalDate()));
 
 					Element souscripteur = production.addElement("souscripteur");
-					// Check this section for static values
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout");
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
 
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
 
-						while (client.next()) {
+						while (client.next()) {// Check this section for static values
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout");
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
 							// the prenom should be the last name, then nom should be the rest of the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
@@ -1998,10 +2307,16 @@ public class SubmitMotorPolicy {
 								}
 							}
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
+
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
+
+							}
 
 						}
 					}
@@ -2120,6 +2435,12 @@ public class SubmitMotorPolicy {
 											+ Settings.orgCode)) {
 						while (vehicle.next()) {
 
+							String validateMakeModel = SubmitMotorVehicle
+									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+							if (!validateMakeModel.equals("Complete")) {
+								return validateMakeModel;
+							}
+
 							Element objet = production.addElement("objet").addAttribute("code", "12005-090003-AUTO")
 									.addAttribute("reference", vehicle.getString("ai_regn_no"));
 							Element biens = objet.addElement("biens");
@@ -2131,17 +2452,20 @@ public class SubmitMotorPolicy {
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type"))
 									.addAttribute("nom", "TYP");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_make").split("-")[0])
-									.addAttribute("nom", "MAR");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_make")).addAttribute("nom",
+									"MAR");
 							// Puissance fiscale
 							attributs.addElement("valeur").addText(vehicle.getString("ai_cv")).addAttribute("nom",
 									"PUF");
 
 							// Date of circulation AI_REGN_DT
-							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom", "DMC");
+							attributs.addElement("valeur").addText(vehicle.getString("AI_REGN_DT")).addAttribute("nom",
+									"DMC");
 
 							attributs.addElement("valeur").addText(vehicle.getString("ai_vehicle_use"))
 									.addAttribute("nom", "USA");
+							attributs.addElement("valeur").addText(vehicle.getString("ai_cc")).addAttribute("nom",
+									"CYL");
 
 							attributs.addElement("valeur").addText("CD").addAttribute("nom", "PAY");
 
@@ -2150,19 +2474,27 @@ public class SubmitMotorPolicy {
 									.addAttribute("nom", "CAR");
 							attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
 									"PTA");
+							if ("CAT04 CAT05".contains(vehicle.getString("ai_vehicle_use")))
+								attributs.addElement("valeur").addText(vehicle.getString("weight")).addAttribute("nom",
+										"PAV");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_seating_capacity"))
 									.addAttribute("nom", "PLA");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_regn_no")).addAttribute("nom",
 									"IMM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_chassis_no"))
 									.addAttribute("nom", "CHA");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_model").split("-")[0])
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_model").contains("-")
+											? vehicle.getString("ai_model").split("-")[1]
+											: vehicle.getString("ai_model"))
 									.addAttribute("nom", "MOD");
 							attributs.addElement("valeur").addText(vehicle.getString("AI_MANUF_YEAR"))
 									.addAttribute("nom", "ANF");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fc_value")).addAttribute("nom",
 									"VAL");
-							attributs.addElement("valeur").addText(vehicle.getString("ai_body_type").equals("4")?"true":"false").addAttribute("nom", "REM");
+							attributs.addElement("valeur")
+									.addText(vehicle.getString("ai_body_type").equals("4") ? "true" : "false")
+									.addAttribute("nom", "REM");
 							attributs.addElement("valeur").addText(vehicle.getString("ai_fuel_type"))
 									.addAttribute("nom", "ENE");
 							attributs.addElement("valeur").addText("C/Bandalungwa").addAttribute("nom", "GAR");
@@ -2232,18 +2564,29 @@ public class SubmitMotorPolicy {
 								while (rset.next()) {
 									// we need to check for IPT cover here, if it is there submit it and reduce the
 									// total premium for main cover
-									double iptPrem = getIPT(pl_index, pl_end_index, riskIndex,
+									double iptPrem = SubmitMotorPolicy.getIPT(pl_index, pl_end_index, riskIndex,
 											rset.getString("sv_cc_code"), sourceTable);
-									double yellowCover = getYellowCover(pl_index, pl_end_index, riskIndex, sourceTable);
-
-									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover;
+									double yellowCover = SubmitMotorPolicy.getYellowCover(pl_index, pl_end_index,
+											riskIndex, sourceTable);
+									double tpPrem = SubmitMotorPolicy.getTpPremium(
+											vehicle.getString("ai_vehicle_type"), vehicle.getInt("ai_cv"),vehicle.getInt("AI_SEATING_CAPACITY"),vehicle.getInt("ai_weight"),vehicle.getInt("ai_cc"));
+									double totalPremium = rset.getDouble("sv_fc_prem") - iptPrem + yellowCover - tpPrem;
 									double reducedPremium = 0.0;
+									System.err.println("totalPremium " + (totalPremium + tpPrem));
+									if (tpPrem == 0 && "0700 0800".contains(rset.getString("sv_cc_code"))) {
+
+										return "Error. Cannot TP Tarrif for Vehicle Type "
+												+ vehicle.getString("ai_vehicle_type") + " and CV "
+												+ vehicle.getString("ai_cv") + " Contact IT";
+
+									}
+
 									// System.err.println(rset.getString("sv_cc_code"));
 									if ("TP 0703 0803".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("TP : 12005-090003-AUTO-RC");
 
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090003-AUTO-DR");
+												"12005-090003-AUTO-RC");
 										garantie.addElement("dateEffet")
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
@@ -2264,13 +2607,11 @@ public class SubmitMotorPolicy {
 												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-
-								 
 										garantie.addElement("prime").addText(String.format("%.0f",
 												(rset.getDouble("sv_fc_prem") - iptPrem + yellowCover) * 100));
 									} else if ("0700 0800".contains(rset.getString("sv_cc_code"))) {
 										// System.out.println("COMP : 12005-090003-AUTO-RC");
-										for (int i = 1; i <= 7; i++) {
+										for (int i = 1; i <= 8; i++) {
 											String cover = "";
 											switch (i) {
 											case 1:
@@ -2294,6 +2635,9 @@ public class SubmitMotorPolicy {
 											case 7:
 												cover = "12005-090003-AUTO-TR";
 												break;
+											case 8:
+												cover = "12005-090003-AUTO-RC";
+												break;
 
 											default:
 												break;
@@ -2301,7 +2645,7 @@ public class SubmitMotorPolicy {
 
 											if (i == 7) {
 												// System.out.println("COMP : " + cover);
-
+												System.err.println("comp prem " + (totalPremium - reducedPremium));
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
@@ -2313,29 +2657,42 @@ public class SubmitMotorPolicy {
 														.addAttribute("nom", "DUR");
 												attributs.addElement("valeur").addText("false").addAttribute("nom",
 														"FRT");
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(totalPremium-reducedPremium) * 100));
-											}
-											else {
-												double prem = Math.round(totalPremium*10/100);
-												System.err.println("reduced "+prem);
+												garantie.addElement("prime").addText(
+														String.format("%.0f", (totalPremium - reducedPremium) * 100));
+											} else if (i == 8) {
+
+												System.err.println("tp prem" + tpPrem);
 
 												Element garantie = souscriptions.addElement("garantie")
 														.addAttribute("code", cover);
 												garantie.addElement("dateEffet").addText(
 														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
 												garantie.addElement("dateEcheance").addText(
-														String.valueOf(rset.getDate("sv_to_dt").toLocalDate())); 
-												garantie.addElement("prime").addText(String.format("%.0f",
-														(prem) * 100));
-												reducedPremium +=  Math.round(totalPremium*10/100);
-												
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (tpPrem) * 100));
+
+											}
+
+											else {
+												double prem = Math.round((totalPremium) * 10 / 100);
+												System.err.println("reduced " + prem);
+
+												Element garantie = souscriptions.addElement("garantie")
+														.addAttribute("code", cover);
+												garantie.addElement("dateEffet").addText(
+														String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+												garantie.addElement("dateEcheance").addText(
+														String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+												garantie.addElement("prime")
+														.addText(String.format("%.0f", (prem) * 100));
+												reducedPremium += Math.round(totalPremium * 10 / 100);
+
 											}
 
 										}
 
 									}
-
 									if (iptPrem > 0) {
 
 										// System.out.println("TP : 12005-090003-AUTO-RC");
@@ -2352,32 +2709,10 @@ public class SubmitMotorPolicy {
 										 * attributs.addElement("valeur").addText(rs.getString("PL_DURATION"))
 										 * .addAttribute("nom", "DUR");
 										 * attributs.addElement("valeur").addText("false").addAttribute("nom", "FRT");
-										 */garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
+										 */
+										garantie.addElement("prime").addText(String.format("%.0f", iptPrem * 100));
 
 									}
-									// get the VAT ONLY for this risk
-
-									double riskTax = 0.0;
-									try (Statement stmt3 = oraConn.createStatement();
-											ResultSet client = stmt3.executeQuery(
-													"  SELECT  dl_org_code, dl_pl_index, dl_end_index,dl_risk_index,dl_code, b.tax_name dl_charge_type, SUM ( NVL ( (DECODE ('', NULL, NVL (DECODE ( 'Debit', 'Nil', 0, dl_lc_amt), 0),\r\n"
-															+ "  NVL (DECODE ( 'Debit', 'Nil', 0, dl_fc_amt), 0))),  0))    dl_charge_amnt     FROM vw_policy_charges a, gl_tax_types b WHERE     a.dl_org_code = b.tax_org_code      \r\n"
-															+ "  AND a.dl_type = b.tax_type  AND a.dl_code = b.tax_code AND dl_source = '"
-															+ sourceTable + "'"
-															+ " AND dl_code = 'CHG61' and dl_pl_index =  " + pl_index
-															+ " and dl_end_index = " + pl_end_index
-															+ " and dl_risk_index = " + riskIndex
-															+ " and dl_org_code = " + Settings.orgCode + " GROUP BY\r\n"
-															+ "  dl_org_code, dl_pl_index,dl_end_index,dl_risk_index,dl_code, b.tax_name ORDER BY dl_charge_type")) {
-
-										while (client.next()) {
-
-											riskTax += client.getDouble("dl_charge_amnt");
-
-										}
-									}
-									 souscriptions.addElement("taxeValeurAjoutee")
-											.addText(String.format("%.0f", riskTax * 100));
 
 								}
 							}
@@ -2469,6 +2804,32 @@ public class SubmitMotorPolicy {
 		return yellowCover;
 	}
 
+	public static double getTpPremium(String vehicleType, int vehicleCv, int vehiclePassangers, int vehicleTonnage,
+			int vehicleCC) {
+		double tpPrem = 0.0;
+		String query = 
+				"SELECT round((tl_rate*tl_rate_per),2) tp_premium FROM   UW_TARIFFS_HEADER a INNER JOIN UW_TARIFF_LINES b\r\n"
+						+ "ON TH_ORG_CODE = TL_ORG_CODE AND TH_CODE = TL_TH_CODE where th_cc_code = 'TP' AND TH_VEHICLE_TYPE = '"
+						+ vehicleType + "'\r\n" + "AND (CASE WHEN TL_VALUE_TYPE = 'CV' THEN  " + vehicleCv
+						+ " WHEN TL_VALUE_TYPE = 'CC' THEN " + vehicleCC
+						+ " WHEN  TL_VALUE_TYPE = 'TONNAGE' THEN  " + vehicleTonnage
+						+ " WHEN TL_VALUE_TYPE = 'PASSENGERS' THEN  " + vehiclePassangers
+						+ " ELSE 0  END) between TL_VALUE_FM and TL_VALUE_TO";
+		System.out.println("Tarrif query "+ query);
+		try (Connection oraConn = CreateConnection.getOraConn();
+				Statement stmttt = oraConn.createStatement();
+				ResultSet rsetss = stmttt.executeQuery(query);) {
+			while (rsetss.next()) {
+				tpPrem = rsetss.getDouble("tp_premium");
+			}
+		} catch (Exception exx) {
+
+			exx.printStackTrace();
+
+		}
+		return tpPrem;
+	}
+
 	public static String policyHeaderQuery(int pl_index, int pl_end_index) {
 		/*
 		 * String endType = "";
@@ -2483,29 +2844,23 @@ public class SubmitMotorPolicy {
 		 * } } catch (SQLException e) { // TODO Auto-generated catch block
 		 * e.printStackTrace(); }
 		 */
-		String headerQuery = "SELECT (case when pl_type = 'Renewal' then pkg_uw.get_polno_from_index(pl_org_code,pl_ren_pl_index) else pl_no end) pl_no	, pl_index,PL_ASSR_AENT_CODE,PL_GL_DATE,PL_ASSR_ENT_CODE,CREATED_ON, "
-				+ " (select nvl(ent_licence_no,' ')  from all_entity where ent_aent_code = pl_assr_aent_code and ent_code = pl_assr_ent_code) ent_licence_no,"
-				+ "pl_end_no,PL_CUR_CODE,PL_CUR_RATE,PL_FM_DT,PL_TO_DT , round(MONTHS_BETWEEN(PL_TO_DT,PL_FM_DT)) PL_DURATION, nvl(PKG_SYSTEM_ADMIN.get_column_value_three('ALL_ENTITY_ADDRESSES',"
-				+ "'ADDR_VALUE','ADDR_AENT_CODE','ADDR_ENT_CODE','ADDR_TYPE',PL_ASSR_AENT_CODE,PL_ASSR_ENT_CODE,'Physical Address'),'N/A') voie,"
-				+ " (CASE WHEN pl_int_aent_code IN (25, 70) THEN  PKG_SYSTEM_ADMIN.get_column_value_three ('all_entity_codes', "
-				+ "                                                       'ENT_APP_ENTCODE', "
-				+ "                                                       'ENT_AENT_CODE', "
-				+ "                                                       'ENT_CODE', "
-				+ "                                                       'ENT_APPLICATION', "
-				+ "                                                       PL_INT_AENT_CODE, "
-				+ "                                                       PL_INT_ENT_CODE, "
-				+ "                                                       'ARCA') " + "           ELSE NULL  END) "
-				+ "          arca_code, (CASE "
-				+ "           WHEN pl_int_aent_code IN (25, 70) THEN  PKG_SYSTEM_ADMIN.get_column_value_three ('uw_policy_comm', "
-				+ "                                                       'CM_PERCENT', "
-				+ "                                                       'CM_PL_INDEX', "
-				+ "                                                       'CM_END_INDEX', "
-				+ "                                                       'CM_ENT_CODE', "
-				+ "                                                       PL_INDEX, "
-				+ "                                                       PL_END_INDEX, "
-				+ "                                                       PL_INT_ENT_CODE) "
-				+ "           ELSE NULL END) comm_rate from uw_policy where pl_index = " + pl_index
-				+ " and pl_end_index = " + pl_end_index + " and pl_org_code = " + Settings.orgCode;
+
+		String headerQuery = " SELECT (CASE WHEN pl_type = 'Renewal' THEN pkg_uw.get_polno_from_index (pl_org_code, pl_ren_pl_index) ELSE   pl_no END) pl_no, pl_index, \r\n"
+				+ " PL_ASSR_AENT_CODE, PL_GL_DATE, PL_ASSR_ENT_CODE, CREATED_ON, (SELECT NVL (ent_licence_no, ' ')   FROM all_entity   WHERE     ent_aent_code = \r\n"
+				+ "  pl_assr_aent_code   AND ent_code = pl_assr_ent_code) ent_licence_no, pl_end_no, PL_CUR_CODE, PL_CUR_RATE, PL_FM_DT, PL_TO_DT, ROUND (MONTHS_BETWEEN \r\n"
+				+ "  (PL_TO_DT, PL_FM_DT)) PL_DURATION, PKG_SYSTEM_ADMIN.get_column_value_three ('ALL_ENTITY_ADDRESSES',   'ADDR_VALUE',   'ADDR_AENT_CODE',   '\r\n"
+				+ "  ADDR_ENT_CODE',   'ADDR_TYPE',   PL_ASSR_AENT_CODE,   PL_ASSR_ENT_CODE,   'Physical Address') voie, PKG_SYSTEM_ADMIN.get_column_value_three ('\r\n"
+				+ "  ALL_ENTITY_ADDRESSES',   'ADDR_VALUE',   'ADDR_AENT_CODE',   'ADDR_ENT_CODE',   'ADDR_TYPE',   PL_ASSR_AENT_CODE,   PL_ASSR_ENT_CODE,   'quartier') \r\n"
+				+ "  quartier, PKG_CUST.GET_COMMUNE_CODE(PKG_SYSTEM_ADMIN.get_column_value_three ('ALL_ENTITY_ADDRESSES',   'ADDR_VALUE',   'ADDR_AENT_CODE',   'ADDR_ENT_CODE',   'ADDR_TYPE',   \r\n"
+				+ "    PL_ASSR_AENT_CODE,   PL_ASSR_ENT_CODE,   'commune')) commune, PKG_SYSTEM_ADMIN.get_column_value_three ('ALL_ENTITY_ADDRESSES',   'ADDR_VALUE',   '\r\n"
+				+ "    ADDR_AENT_CODE',   'ADDR_ENT_CODE',   'ADDR_TYPE',   PL_ASSR_AENT_CODE,   PL_ASSR_ENT_CODE,   'complement') complement, (CASE   WHEN \r\n"
+				+ "    pl_int_aent_code IN (25, 70) THEN   PKG_SYSTEM_ADMIN.get_column_value_three ('all_entity_codes',    'ENT_APP_ENTCODE',    'ENT_AENT_CODE',    '\r\n"
+				+ "      ENT_CODE',    'ENT_APPLICATION',    PL_INT_AENT_CODE,    PL_INT_ENT_CODE,    'ARCA') ELSE   NULL END) arca_code, (CASE   WHEN pl_int_aent_code \r\n"
+				+ "    IN (25, 70) THEN   PKG_SYSTEM_ADMIN.get_column_value_three ('uw_policy_comm',    'CM_PERCENT',    'CM_PL_INDEX',    'CM_END_INDEX',    '\r\n"
+				+ "      CM_ENT_CODE',    PL_INDEX,    PL_END_INDEX,    PL_INT_ENT_CODE) ELSE   NULL END) comm_rate, DECODE (pl_os_code,  '13001', 'V/Kinshasa',  '13002'\r\n"
+				+ "      , 'V/Lubumbashi',  '13003', 'V/Goma',  '13004', 'V/Kongolo',  'V/Kinshasa') pl_city FROM uw_policy WHERE pl_index = "
+				+ pl_index + " AND pl_end_index = " + pl_end_index + " \r\n" + "      AND pl_org_code = '"
+				+ Settings.orgCode + "'";
 		return headerQuery;
 
 	}

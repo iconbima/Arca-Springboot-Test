@@ -80,10 +80,12 @@ public class SubmitGITPolicy {
 						}
 					}
 
-					if (sourceTable.equals("UW") && endType.equals("110")) {
+					if (sourceTable.equals("UW")
+
+							&& endType.equals("110")) {
 
 						myResponse.addProperty("status", "-1");
-						myResponse.addProperty("statusDescription", "Please activate the renewal before submitting.");
+						myResponse.addProperty("statusDescription", "Please approve the policy before submitting.");
 						return myResponse.get("statusDescription").toString();
 					}
 
@@ -198,14 +200,16 @@ public class SubmitGITPolicy {
 
 		Element production = enveloppe.addElement("production").addAttribute("id", String.valueOf(documentID));
 
-		production.addElement("assureur").addAttribute("numeroAgrement", "12005");
-
 		try {
 			try (Connection oraConn = CreateConnection.getOraConn();
 					Statement stmt22 = oraConn.createStatement();
 
 					ResultSet rs = stmt22.executeQuery(SubmitMotorPolicy.policyHeaderQuery(pl_index, pl_end_index))) {
 				while (rs.next()) {
+
+					production.addElement("ville").addText(rs.getString("pl_city"));
+					production.addElement("assureur").addAttribute("numeroAgrement", "12005");
+
 					if (rs.getString("arca_code") != null) {
 
 						production.addElement("intermediaire").addAttribute("numeroAgrement",
@@ -213,7 +217,6 @@ public class SubmitGITPolicy {
 						production.addElement("tauxCommission")
 								.addText(String.format("%.2f", rs.getDouble("comm_rate")));
 					}
-
 					production.addElement("produit").addAttribute("version", "1").addText("12005-090006");
 					production.addElement("exercice")
 							.addText(String.valueOf(rs.getDate("PL_FM_DT").toLocalDate().getYear()));
@@ -233,25 +236,51 @@ public class SubmitGITPolicy {
 						return "Error. Please provide Client NIF Number";
 					}
 					Element souscripteur = production.addElement("souscripteur");
-					// Check this section for static values
-					Element personne = souscripteur.addElement("personne")
-							.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
-							.addAttribute("immatriculation", "non assujetti").addAttribute("paysEtablissement", "CD")
-							.addAttribute("personneMorale", "false").addAttribute("operation", "ajout")
-							.addAttribute("nif", rs.getString("ent_licence_no"));
-					Element adresse = personne.addElement("adresse");
-					adresse.addElement("voie").addText(rs.getString("voie"));
-					adresse.addElement("commune").addAttribute("code", "C/Gombe");
 
 					try (Statement stmt2 = oraConn.createStatement();
 
 							ResultSet client = stmt2
 									.executeQuery("select ent_type,ent_salutation,ent_surname,ent_name,ent_other_names,"
-											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on from all_entity where ENT_AENT_CODE = '"
+											+ "ENt_id_no,ent_gender,ent_sector,ent_profession,created_on,ent_email,"
+											+ "ent_cellphone from all_entity where ENT_AENT_CODE = '"
 											+ rs.getString("PL_ASSR_AENT_CODE") + "' and ent_code = '"
 											+ rs.getString("PL_ASSR_ENT_CODE") + "'")) {
 
 						while (client.next()) {
+
+							// Check this section for static values
+							Element personne = souscripteur.addElement("personne")
+									.addAttribute("reference", rs.getString("PL_ASSR_ENT_CODE"))
+									.addAttribute("immatriculation", "non assujetti")
+									.addAttribute("paysEtablissement", "CD")
+									.addAttribute("personneMorale",
+											client.getString("ent_type").equalsIgnoreCase("Individual") ? "false"
+													: "true")
+									.addAttribute("operation", "ajout")
+									.addAttribute("nif", rs.getString("ent_licence_no"));
+							if (!(rs.getString("voie") == null && rs.getString("commune") == null
+									&& rs.getString("quartier") == null && rs.getString("complement") == null)) {
+								Element adresse = personne.addElement("adresse");
+								if (rs.getString("voie") != null)
+									adresse.addElement("voie").addText(rs.getString("voie"));
+								if (rs.getString("commune") != null)
+									adresse.addElement("commune").addAttribute("code", rs.getString("commune"));
+								if (rs.getString("quartier") != null)
+									adresse.addElement("quartier").addText(rs.getString("quartier"));
+								if (rs.getString("complement") != null)
+									adresse.addElement("complement").addText(rs.getString("complement"));
+							}
+							if (client.getString("ent_email") == null && client.getString("ent_cellphone") == null) {
+
+								return "Error. Both Email and Phone Cannot be Empty!";
+							}
+
+							if (client.getString("ent_cellphone") != null) {
+								personne.addElement("telephone").addText(client.getString("ent_cellphone"));
+							}
+							if (client.getString("ent_email") != null) {
+								personne.addElement("email").addText(client.getString("ent_email"));
+							}
 							// the prenom should be the last name, then nom should be the rest of the name
 							String[] nameParts = client.getString("ent_name").split("\\s+");
 
@@ -265,12 +294,16 @@ public class SubmitGITPolicy {
 									restOfNames.append(" "); // Add space between names
 								}
 							}
+							if (client.getString("ent_type").equalsIgnoreCase("Individual")) {
+								personne.addElement("prenom").addText(lastName);
+								personne.addElement("nom").addText(restOfNames.toString());
+								personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
+								personne.addElement("civilite").addAttribute("code", "M.");
+							} else {
 
-							personne.addElement("prenom").addText(lastName);
-							personne.addElement("nom").addText(restOfNames.toString());
-							personne.addElement("lieuNaissance").addText("Kinshasa").addAttribute("codePays", "CD");
-							personne.addElement("civilite").addAttribute("code", "M.");
+								personne.addElement("denominationSociale").addText(client.getString("ent_name"));
 
+							}
 						}
 					}
 					int totalOtherCharges = 0;
@@ -337,7 +370,7 @@ public class SubmitGITPolicy {
 					}
 
 					try (Statement stmt5 = oraConn.createStatement();
-							ResultSet risk = stmt5.executeQuery("select gi_risk_index, gi_goods_desc, --DESC \r\n"
+							ResultSet risk = stmt5.executeQuery("select gi_risk_index,gi_mode, gi_goods_desc, --DESC \r\n"
 									+ "NVL(TO_CHAR( case when gi_weight_uom = 'Kilograme' then gi_weight\r\n"
 									+ "									 when  gi_weight_uom = 'Tonnage' then gi_weight\r\n"
 									+ "									else  gi_weight end),'N/A') weight, --PMC \r\n"
@@ -346,13 +379,27 @@ public class SubmitGITPolicy {
 									+ "									else  'Not Defined' end),'N/A') weight_uom, --UNSTA \r\n"
 									+ "                  nvl(pl_fc_si,0) pl_fc_si, --VLA \r\n"
 									+ "                  nvl(gi_cover_ref,'N/A') gi_cover_ref, --NCM \r\n"
+									+ "                   gi_origin , --PEM \r\n"
+									+ "                   nvl(GI_SHIP_AGE,GI_IDF_NO) GI_SHIP_AGE , --AGN \r\n"
+									+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_DISH_PORT) GI_DISH_PORT , --VDEB \r\n"
+									+ "                   gi_destination gi_destination_code , --PDEB \r\n"
+									+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_LOADING_AT) GI_LOADING_AT , --VEM \r\n"
 									+ "                  nvl(gi_conveyance,'N/A') gi_conveyance, --MTR \r\n"
 									+ "                  nvl(gi_bol_ref,'N/A') gi_bol_ref, --DTR \r\n"
 									+ "                  nvl(gi_registration_no,'NA') gi_registration_no, --MAR \r\n"
 									+ "                  nvl(PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',gi_destination),  nvl((select gt_remarks from ai_gIt_mode where gt_pl_index = gi_pl_index and gt_source = 'DISCHPORT'),'N/A')) gi_destination, --VOA \r\n"
 									+ "                  pkg_system_admin.spell_amounts(nvl(pl_fc_si,0)) si_words, --VLA \r\n"
-									+ "                  to_char(gi_act_depature_date,'RRRR-MM-DD') gi_act_depature_date  --DDV \r\n"
-									+ "                  \r\n"
+									+ "                  to_char(gi_act_depature_date,'RRRR-MM-DD') gi_act_depature_date,  --DDV \r\n"
+									+ "                  (SELECT AR_CERT_NO FROM arca_requests\r\n"
+									+ "					 WHERE ar_request_type = 'CANCELLATION'\r\n"
+									+ "					 AND ar_success = 'Y' AND AR_RISK_INDEX = pl_risk_index\r\n"
+									+ "					 AND AR_PL_INDEX = pl_pl_index AND AR_END_INDEX = pl_end_index fetch first 1 row only) cancelled_cert,"
+									+ "					(CASE WHEN LENGTH(GI_ORIGIN) = 2\r\n"
+									+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_ORIGIN),'0') = 'Arca'\r\n"
+									+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_ORIGIN_VALID,\r\n"
+									+ "					(CASE WHEN LENGTH(GI_DESTINATION) = 2\r\n"
+									+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_DESTINATION),'0') = 'Arca'\r\n"
+									+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_DESTINATION_VALID"
 									+ "                  from ai_git a,uw_policy_risks b \r\n"
 									+ "                  where  a.gi_risk_index = b.pl_risk_index\r\n"
 									+ "                  and a.GI_PL_INDEX = b.PL_PL_INDEX\r\n"
@@ -368,10 +415,63 @@ public class SubmitGITPolicy {
 							Element bien = biens.addElement("bien")
 									.addAttribute("reference", risk.getString("gi_risk_index"))
 									.addAttribute("operation", "ajout");
+
+							if (risk.getString("cancelled_cert") != null) {
+
+								bien.addAttribute("certificat", risk.getString("cancelled_cert"));
+							}
 							Element attributs = bien.addElement("attributs");
 
 							if (risk.getString("weight").equals("N/A")) {
 								return "Error. Please enter goods weight first!";
+							}
+
+							if (risk.getString("gi_origin") == null) {
+								return "Error. Please enter country of origin first!";
+							}
+							if (risk.getString("GI_DISH_PORT") == null) {
+								return "Error. Please enter discharge port first!";
+							}
+							if (risk.getString("GI_MODE") == null) {
+								return "Error. Please enter mode first!";
+							}
+
+							if (risk.getString("GI_LOADING_AT") == null) {
+								return "Error. Please enter loading at port first!";
+							}
+							if (risk.getString("gi_destination_code") == null) {
+								return "Error. Please enter destination country first!";
+							}
+							if (risk.getString("GI_SHIP_AGE") == null) {
+								return "Error. Please enter age of ship!";
+							}
+							if (risk.getString("gi_goods_desc") == null) {
+								return "Error. Goods description cannot be empty!";
+							}
+							
+
+							if (risk.getString("GI_ORIGIN_VALID").equals("N")) {
+								return "Error. Invalid Country of Origin, Pick One that Matches ARCA List of Values!";
+							}
+							if (risk.getString("GI_DESTINATION_VALID").equals("N")) {
+								return "Error. Invalid Destination Country, Pick One that Matches ARCA List of Values!";
+							}
+							String idmt = "";
+							switch (risk.getString("gi_mode")) {
+							case "ROAD":
+								idmt = "T";
+								break;
+							case "SEA":
+
+								idmt = "M";
+								break;
+							case "AIR":
+
+								idmt = "A";
+								break;
+
+							default:
+								break;
 							}
 
 							// All attributes go here
@@ -386,12 +486,29 @@ public class SubmitGITPolicy {
 							attributs.addElement("valeur").addText(risk.getString("gi_cover_ref")).addAttribute("nom",
 									"NCM");
 
+							attributs.addElement("valeur").addText(risk.getString("gi_origin")).addAttribute("nom",
+									"PEM");
+
+							attributs.addElement("valeur").addText(risk.getString("GI_LOADING_AT")).addAttribute("nom",
+									"VEM");
+
+							attributs.addElement("valeur").addText(risk.getString("gi_destination_code"))
+									.addAttribute("nom", "PDEB");
+
+							attributs.addElement("valeur").addText(risk.getString("GI_DISH_PORT")).addAttribute("nom",
+									"VDEB");
+
+							attributs.addElement("valeur").addText(risk.getString("GI_SHIP_AGE")).addAttribute("nom",
+									"AGN");
+
 							attributs.addElement("valeur").addText(risk.getString("si_words")).addAttribute("nom",
 									"VLAL");
 							attributs.addElement("valeur").addText(risk.getString("gi_act_depature_date"))
 									.addAttribute("nom", "DDV");
 							// adding the conveyance number
 							attributs.addElement("valeur").addText(risk.getString("gi_conveyance")).addAttribute("nom",
+									"IDMT");
+							attributs.addElement("valeur").addText(idmt).addAttribute("nom",
 									"MTR");
 							// adding the bill of lading no
 							attributs.addElement("valeur").addText(risk.getString("gi_bol_ref")).addAttribute("nom",
@@ -421,8 +538,8 @@ public class SubmitGITPolicy {
 
 										attributs.addElement("valeur").addText(rset.getString("cover_name"))
 												.addAttribute("nom", "COG");
-										attributs.addElement("valeur").addText("claims@mayfair.cd")
-										.addAttribute("nom", "CAV");
+										attributs.addElement("valeur").addText("claims@mayfair.cd").addAttribute("nom",
+												"CAV");
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
 												"12005-090006-FAC-MV");
 										garantie.addElement("dateEffet")
@@ -440,6 +557,29 @@ public class SubmitGITPolicy {
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 										garantie.addElement("prime").addText(String.valueOf(0));
 
+									}
+								}
+							}
+
+//							marchandises
+							Element marchandises = bien.addElement("marchandises");
+
+							try (Statement stmt2222 = oraConn.createStatement();
+									ResultSet rset2 = stmt2222.executeQuery(
+											"SELECT SM_ARCA_CODE, a.PM_SMI_DESC, sm_name,pm_fc_si FROM uw_policy_risk_smi  a\r\n"
+													+ "INNER JOIN uw_class_smi b ON sm_org_code = pm_org_code\r\n"
+													+ "AND sm_mc_code = pm_mc_code AND sm_code = pm_sm_code\r\n"
+													+ "AND pm_pl_index = " + pl_index + " AND pm_end_index = "
+													+ pl_end_index + " AND pm_risk_index = " + riskIndex);) {
+								while (rset2.next()) {
+									if (rset2.getString("SM_ARCA_CODE") == null) {
+
+										return "Error. ARCA Code for this SMI Not Found, contact IT!";
+
+									} else {
+										Element marchandise = marchandises.addElement("marchandise");
+										marchandise.addElement("code").addText(rset2.getString("SM_ARCA_CODE"));
+										marchandise.addElement("valeur").addText(rset2.getString("pm_fc_si"));
 									}
 								}
 							}
@@ -533,11 +673,12 @@ public class SubmitGITPolicy {
 						.addAttribute("identifiant", ArcaController.USERNAME)
 						.addAttribute("motDePasse", ArcaController.PASSWORD)
 						.addAttribute("timestamp", getCurrentUtcTime());
-
+				String certNo = cert_no.contains("_")?cert_no.split("_")[1]:cert_no;
 				Element annulationCertificat = enveloppe.addElement("annulationCertificat")
-						.addAttribute("numeroCertificat", cert_no);
+						.addAttribute("numeroCertificat", certNo);
 
-				annulationCertificat.addElement("motifAnnulation").addText(codeReason);
+				annulationCertificat.addElement("motifAnnulation").addText("EMA");
+				annulationCertificat.addElement("description").addText(codeReason);
 
 				System.out.println(cancellationXML.asXML());
 				try (Connection oraConn = CreateConnection.getOraConn();) {
