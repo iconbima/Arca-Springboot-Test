@@ -34,7 +34,7 @@ public class SubmitMotorVehicle {
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
-							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
+							"select ARCA_ENVELOPE_ID_SEQ.nextval correlation_id, ARCA_DOCUMENT_ID_SEQ.nextval document_id from dual")) {
 				while (rs.next()) {
 
 					RabbitMQSender sender = new RabbitMQSender();
@@ -484,7 +484,7 @@ public class SubmitMotorVehicle {
 
 								bien.addAttribute("certificat", vehicle.getString("cancelled_cert"));
 							}
-							String validateMakeModel = validateMakeModel(vehicle.getString("ai_make"),
+							String validateMakeModel = validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"),
 									vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
@@ -992,7 +992,7 @@ public class SubmitMotorVehicle {
 								bien.addAttribute("certificat", vehicle.getString("cancelled_cert"));
 							}
 
-							String validateMakeModel = validateMakeModel(vehicle.getString("ai_make"),
+							String validateMakeModel = validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"),
 									vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
@@ -1500,7 +1500,7 @@ public class SubmitMotorVehicle {
 								bien.addAttribute("certificat", vehicle.getString("cancelled_cert"));
 							}
 
-							String validateMakeModel = validateMakeModel(vehicle.getString("ai_make"),
+							String validateMakeModel = validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"),
 									vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
@@ -2008,7 +2008,7 @@ public class SubmitMotorVehicle {
 								bien.addAttribute("certificat", vehicle.getString("cancelled_cert"));
 							}
 
-							String validateMakeModel = validateMakeModel(vehicle.getString("ai_make"),
+							String validateMakeModel = validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"),
 									vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
@@ -2315,7 +2315,7 @@ public class SubmitMotorVehicle {
 
 	}
 
-	public static String validateMakeModel(String make, String model) {
+	public static String validateMakeModel(String regnNo, String make, String model) {
 		String response = "Complete";
 		try {
 			String query = "SELECT CASE WHEN EXISTS (SELECT *  FROM AD_SYSTEM_CODES  WHERE     SYS_TYPE = 'AD_VEHICLE_MAKE'  AND SYS_CODE = '"
@@ -2330,11 +2330,11 @@ public class SubmitMotorVehicle {
 					ResultSet rs = stmt5.executeQuery(query)) {
 				while (rs.next()) {
 					if (rs.getString("VALID_MAKE").equals("N")) {
-						return "Error. Invalid Vehicle Make, Pick Make from Arca's Provided List";
+						return "Error. Invalid Vehicle Make For "+regnNo+", Pick Make from Arca's Provided List";
 					}
 
 					if (rs.getString("VALID_MODEL").equals("N")) {
-						return "Error. Invalid Vehicle Model, Pick Model from Arca's Provided List, It must belong to the vehicle make picked above!";
+						return "Error. Invalid Vehicle Model For "+regnNo+", Pick Model from Arca's Provided List, It must belong to the vehicle make picked above!";
 					}
 
 				}

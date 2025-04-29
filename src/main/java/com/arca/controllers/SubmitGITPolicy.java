@@ -45,7 +45,7 @@ public class SubmitGITPolicy {
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
-							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
+							"select ARCA_ENVELOPE_ID_SEQ.nextval correlation_id, ARCA_DOCUMENT_ID_SEQ.nextval document_id from dual")) {
 				while (rs.next()) {
 
 					String endType = "";
@@ -370,42 +370,43 @@ public class SubmitGITPolicy {
 					}
 
 					try (Statement stmt5 = oraConn.createStatement();
-							ResultSet risk = stmt5.executeQuery("select gi_risk_index,gi_mode, gi_goods_desc, --DESC \r\n"
-									+ "NVL(TO_CHAR( case when gi_weight_uom = 'Kilograme' then gi_weight\r\n"
-									+ "									 when  gi_weight_uom = 'Tonnage' then gi_weight\r\n"
-									+ "									else  gi_weight end),'N/A') weight, --PMC \r\n"
-									+ "                  NVL(TO_CHAR( case when gi_weight_uom = 'Kilograme' then 'Kilogramme'\r\n"
-									+ "									 when  gi_weight_uom = 'Tonnage' then 'Tonnes'\r\n"
-									+ "									else  'Not Defined' end),'N/A') weight_uom, --UNSTA \r\n"
-									+ "                  nvl(pl_fc_si,0) pl_fc_si, --VLA \r\n"
-									+ "                  nvl(gi_cover_ref,'N/A') gi_cover_ref, --NCM \r\n"
-									+ "                   gi_origin , --PEM \r\n"
-									+ "                   nvl(GI_SHIP_AGE,GI_IDF_NO) GI_SHIP_AGE , --AGN \r\n"
-									+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_DISH_PORT) GI_DISH_PORT , --VDEB \r\n"
-									+ "                   gi_destination gi_destination_code , --PDEB \r\n"
-									+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_LOADING_AT) GI_LOADING_AT , --VEM \r\n"
-									+ "                  nvl(gi_conveyance,'N/A') gi_conveyance, --MTR \r\n"
-									+ "                  nvl(gi_bol_ref,'N/A') gi_bol_ref, --DTR \r\n"
-									+ "                  nvl(gi_registration_no,'NA') gi_registration_no, --MAR \r\n"
-									+ "                  nvl(PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',gi_destination),  nvl((select gt_remarks from ai_gIt_mode where gt_pl_index = gi_pl_index and gt_source = 'DISCHPORT'),'N/A')) gi_destination, --VOA \r\n"
-									+ "                  pkg_system_admin.spell_amounts(nvl(pl_fc_si,0)) si_words, --VLA \r\n"
-									+ "                  to_char(gi_act_depature_date,'RRRR-MM-DD') gi_act_depature_date,  --DDV \r\n"
-									+ "                  (SELECT AR_CERT_NO FROM arca_requests\r\n"
-									+ "					 WHERE ar_request_type = 'CANCELLATION'\r\n"
-									+ "					 AND ar_success = 'Y' AND AR_RISK_INDEX = pl_risk_index\r\n"
-									+ "					 AND AR_PL_INDEX = pl_pl_index AND AR_END_INDEX = pl_end_index fetch first 1 row only) cancelled_cert,"
-									+ "					(CASE WHEN LENGTH(GI_ORIGIN) = 2\r\n"
-									+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_ORIGIN),'0') = 'Arca'\r\n"
-									+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_ORIGIN_VALID,\r\n"
-									+ "					(CASE WHEN LENGTH(GI_DESTINATION) = 2\r\n"
-									+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_DESTINATION),'0') = 'Arca'\r\n"
-									+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_DESTINATION_VALID"
-									+ "                  from ai_git a,uw_policy_risks b \r\n"
-									+ "                  where  a.gi_risk_index = b.pl_risk_index\r\n"
-									+ "                  and a.GI_PL_INDEX = b.PL_PL_INDEX\r\n"
-									+ "                  and a.gi_org_code = b.pl_org_code\r\n"
-									+ "                  and a.gi_org_code = " + Settings.orgCode + " \r\n"
-									+ "                  and gi_pl_index = " + pl_index)) {
+							ResultSet risk = stmt5
+									.executeQuery("select gi_risk_index,gi_mode, gi_goods_desc, --DESC \r\n"
+											+ "NVL(TO_CHAR( case when gi_weight_uom = 'Kilograme' then gi_weight \r\n"
+											+ "									 when  gi_weight_uom = 'Tonnage' then gi_weight \r\n"
+											+ "									else  gi_weight end),'N/A') weight, --PMC \r\n"
+											+ "                  NVL(TO_CHAR( case when gi_weight_uom = 'Kilograme' then 'Kilogramme'\r\n"
+											+ "									 when  gi_weight_uom = 'Tonnage' then 'Tonnes'\r\n"
+											+ "									else  'Not Defined' end),'N/A') weight_uom, --UNSTA \r\n"
+											+ "                  nvl(pl_fc_si * 100,0) pl_fc_si, --VLA \r\n"
+											+ "                  nvl(gi_cover_ref,'N/A') gi_cover_ref, --NCM \r\n"
+											+ "                   gi_origin , --PEM \r\n"
+											+ "                   nvl(GI_SHIP_AGE,GI_IDF_NO) GI_SHIP_AGE , --AGN \r\n"
+											+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_DISH_PORT) GI_DISH_PORT , --VDEB \r\n"
+											+ "                   gi_destination gi_destination_code , --PDEB \r\n"
+											+ "                   PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',GI_LOADING_AT) GI_LOADING_AT , --VEM \r\n"
+											+ "                  nvl(gi_conveyance,'N/A') gi_conveyance, --MTR \r\n"
+											+ "                  nvl(gi_bol_ref,'N/A') gi_bol_ref, --DTR \r\n"
+											+ "                  nvl(gi_registration_no,'NA') gi_registration_no, --MAR \r\n"
+											+ "                  nvl(PKG_SYSTEM_ADMIN.GET_SYSTEM_DESC('ALL_PORTS',gi_destination),  nvl((select gt_remarks from ai_gIt_mode where gt_pl_index = gi_pl_index and gt_source = 'DISCHPORT'),'N/A')) gi_destination, --VOA \r\n"
+											+ "                  pkg_system_admin.spell_amounts(nvl(pl_fc_si,0)) si_words, --VLA \r\n"
+											+ "                  to_char(gi_act_depature_date,'RRRR-MM-DD') gi_act_depature_date,  --DDV \r\n"
+											+ "                  (SELECT AR_CERT_NO FROM arca_requests\r\n"
+											+ "					 WHERE ar_request_type = 'CANCELLATION'\r\n"
+											+ "					 AND ar_success = 'Y' AND AR_RISK_INDEX = pl_risk_index\r\n"
+											+ "					 AND AR_PL_INDEX = pl_pl_index AND AR_END_INDEX = pl_end_index fetch first 1 row only) cancelled_cert,"
+											+ "					(CASE WHEN LENGTH(GI_ORIGIN) = 2\r\n"
+											+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_ORIGIN),'0') = 'Arca'\r\n"
+											+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_ORIGIN_VALID,\r\n"
+											+ "					(CASE WHEN LENGTH(GI_DESTINATION) = 2\r\n"
+											+ "					AND NVL((SELECT SYS_FLEX_01 FROM AD_SYSTEM_CODES WHERE SYS_TYPE = 'ALL_PORTS' AND SYS_CODE = GI_DESTINATION),'0') = 'Arca'\r\n"
+											+ "					THEN 'Y' ELSE 'N' END\r\n" + ") GI_DESTINATION_VALID"
+											+ "                  from ai_git a,uw_policy_risks b \r\n"
+											+ "                  where  a.gi_risk_index = b.pl_risk_index\r\n"
+											+ "                  and a.GI_PL_INDEX = b.PL_PL_INDEX\r\n"
+											+ "                  and a.gi_org_code = b.pl_org_code\r\n"
+											+ "                  and a.gi_org_code = " + Settings.orgCode + " \r\n"
+											+ "                  and gi_pl_index = " + pl_index)) {
 						while (risk.next()) {
 
 							Element objet = production.addElement("objet").addAttribute("code", "12005-090006-FAC")
@@ -448,7 +449,6 @@ public class SubmitGITPolicy {
 							if (risk.getString("gi_goods_desc") == null) {
 								return "Error. Goods description cannot be empty!";
 							}
-							
 
 							if (risk.getString("GI_ORIGIN_VALID").equals("N")) {
 								return "Error. Invalid Country of Origin, Pick One that Matches ARCA List of Values!";
@@ -508,8 +508,7 @@ public class SubmitGITPolicy {
 							// adding the conveyance number
 							attributs.addElement("valeur").addText(risk.getString("gi_conveyance")).addAttribute("nom",
 									"IDMT");
-							attributs.addElement("valeur").addText(idmt).addAttribute("nom",
-									"MTR");
+							attributs.addElement("valeur").addText(idmt).addAttribute("nom", "MTR");
 							// adding the bill of lading no
 							attributs.addElement("valeur").addText(risk.getString("gi_bol_ref")).addAttribute("nom",
 									"DTR");
@@ -530,16 +529,63 @@ public class SubmitGITPolicy {
 													+ " and sv_risk_index =  " + riskIndex);) {
 								while (rset.next()) {
 
-									if (rset.getString("sv_cc_code").equalsIgnoreCase("ICC(A)")
-											|| rset.getString("sv_cc_code").equalsIgnoreCase("062")
+									if (
+											 rset.getString("sv_cc_code").equalsIgnoreCase("062")
 											|| rset.getString("sv_cc_code").equalsIgnoreCase("061")
 											|| rset.getString("sv_cc_code").equalsIgnoreCase("ICC(B)")
-											|| rset.getString("sv_cc_code").equalsIgnoreCase("ICC(C)")) {
+											 ) {
 
 										attributs.addElement("valeur").addText(rset.getString("cover_name"))
 												.addAttribute("nom", "COG");
+									}
+									else if(rset.getString("sv_cc_code").equalsIgnoreCase("ICC(A)")) {
+
+										attributs.addElement("valeur").addText("Tous Risques")
+												.addAttribute("nom", "COG");
+									}
+
+									else if(rset.getString("sv_cc_code").equalsIgnoreCase("ICC(C)")) {
+
+										attributs.addElement("valeur").addText("Accidents caractérisés")
+												.addAttribute("nom", "COG");
+									}
 										attributs.addElement("valeur").addText("claims@mayfair.cd").addAttribute("nom",
 												"CAV");
+									
+									if (rset.getString("sv_cc_code").equalsIgnoreCase("ICC(A)")) {
+
+										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090006-FAC-TR");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+										garantie.addElement("prime")
+												.addText(String.format("%.0f",rset.getDouble("sv_fc_prem") * 100));
+
+										garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090006-FAC-MV");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+										garantie.addElement("prime").addText("0");
+
+									} else if (rset.getString("sv_cc_code").equalsIgnoreCase("ICC(C)")) {
+
+										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+												"12005-090006-FAC-FSACEM");
+										garantie.addElement("dateEffet")
+												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+										garantie.addElement("dateEcheance")
+												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+										garantie.addElement("prime")
+												.addText(String.format("%.0f",rset.getDouble("sv_fc_prem") * 100));
+
+									} else if (rset.getString("sv_cc_code").equalsIgnoreCase("062")
+											|| rset.getString("sv_cc_code").equalsIgnoreCase("061")
+											|| rset.getString("sv_cc_code").equalsIgnoreCase("ICC(B)")) {
+
 										Element garantie = souscriptions.addElement("garantie").addAttribute("code",
 												"12005-090006-FAC-MV");
 										garantie.addElement("dateEffet")
@@ -547,17 +593,18 @@ public class SubmitGITPolicy {
 										garantie.addElement("dateEcheance")
 												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
 										garantie.addElement("prime")
-												.addText(String.valueOf(rset.getInt("sv_fc_prem") * 100));
-
-										garantie = souscriptions.addElement("garantie").addAttribute("code",
-												"12005-090006-FAC-DP");
-										garantie.addElement("dateEffet")
-												.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
-										garantie.addElement("dateEcheance")
-												.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
-										garantie.addElement("prime").addText(String.valueOf(0));
+												.addText(String.format("%.0f",rset.getDouble("sv_fc_prem") * 100));
 
 									}
+
+									Element garantie = souscriptions.addElement("garantie").addAttribute("code",
+											"12005-090006-FAC-DP");
+									garantie.addElement("dateEffet")
+											.addText(String.valueOf(rset.getDate("sv_fm_dt").toLocalDate()));
+									garantie.addElement("dateEcheance")
+											.addText(String.valueOf(rset.getDate("sv_to_dt").toLocalDate()));
+									garantie.addElement("prime").addText(String.valueOf(0));
+
 								}
 							}
 
@@ -566,7 +613,7 @@ public class SubmitGITPolicy {
 
 							try (Statement stmt2222 = oraConn.createStatement();
 									ResultSet rset2 = stmt2222.executeQuery(
-											"SELECT SM_ARCA_CODE, a.PM_SMI_DESC, sm_name,pm_fc_si FROM uw_policy_risk_smi  a\r\n"
+											"SELECT SM_ARCA_CODE, a.PM_SMI_DESC, sm_name,pm_fc_si*100 pm_fc_si FROM uw_policy_risk_smi  a\r\n"
 													+ "INNER JOIN uw_class_smi b ON sm_org_code = pm_org_code\r\n"
 													+ "AND sm_mc_code = pm_mc_code AND sm_code = pm_sm_code\r\n"
 													+ "AND pm_pl_index = " + pl_index + " AND pm_end_index = "
@@ -673,7 +720,7 @@ public class SubmitGITPolicy {
 						.addAttribute("identifiant", ArcaController.USERNAME)
 						.addAttribute("motDePasse", ArcaController.PASSWORD)
 						.addAttribute("timestamp", getCurrentUtcTime());
-				String certNo = cert_no.contains("_")?cert_no.split("_")[1]:cert_no;
+				String certNo = cert_no.contains("_") ? cert_no.split("_")[1] : cert_no;
 				Element annulationCertificat = enveloppe.addElement("annulationCertificat")
 						.addAttribute("numeroCertificat", certNo);
 

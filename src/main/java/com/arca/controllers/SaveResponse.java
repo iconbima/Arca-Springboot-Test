@@ -344,7 +344,7 @@ public class SaveResponse {
 
 					// updating ai_marine_certificates
 					try (PreparedStatement update = oraConn.prepareStatement(
-							"update ai_marine_certificates set  ai_status = 'CANCELLED' where ai_org_code  = ? and"
+							"update ai_marine_certificates set  ai_status = 'REVOKED' where ai_org_code  = ? and"
 									+ " ai_cert_no = ?   ")) {
 
 						update.setString(1, Settings.orgCode);

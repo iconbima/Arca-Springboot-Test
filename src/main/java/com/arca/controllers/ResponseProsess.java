@@ -23,8 +23,6 @@ import com.arca.ArcaController;
 
 public class ResponseProsess {
 
-	
-
 	public static String processResponse(String responseXML) {
 
 		String envelopeID = "";
@@ -35,8 +33,6 @@ public class ResponseProsess {
 		String riskIndex = "";
 		String certUrl = "";
 		String certBase64 = "";
-		
-		
 
 		try {
 
@@ -48,7 +44,8 @@ public class ResponseProsess {
 				envelopeID = node.valueOf("@id");
 
 				// save the response first to a file
-				//System.out.println(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
+				// System.out.println(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID +
+				// ".xml");
 				Path path = Paths.get(ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
 
 				/* Check if this is a cancellation */
@@ -70,7 +67,7 @@ public class ResponseProsess {
 				} catch (IOException ex) {
 					// Print message as exception occurred when
 					// invalid path of local machine is passed
-					System.out.print("Invalid Path "+ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
+					System.out.print("Invalid Path " + ArcaController.ROOTFOLDER + "Responses\\" + envelopeID + ".xml");
 				}
 
 				String responseType = "documentation";
@@ -96,7 +93,8 @@ public class ResponseProsess {
 
 							Element errorElement = (Element) documentNode.selectSingleNode("erreur");
 							String a = errorElement.attributeValue("code");
-							response = (XMLMapper.findErrorMessage(a) + " " + documentNode.selectSingleNode("erreur").getText());
+							response = (XMLMapper.findErrorMessage(a) + " "
+									+ documentNode.selectSingleNode("erreur").getText());
 							if (documentNode.selectSingleNode("erreur").getText().contains("Attribut")) {
 								response = (XMLMapper.findErrorMessage(a) + " "
 										+ documentNode.selectSingleNode("erreur").getText().split(" : ")[0] + " "
@@ -113,7 +111,7 @@ public class ResponseProsess {
 								break;
 							}
 
-							SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, response, "01",null);
+							SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, response, "01", null);
 							statusCode = "01";
 							break;
 						case "OK":
@@ -126,29 +124,28 @@ public class ResponseProsess {
 								Element current = (Element) certNode;
 								certNo = certNode.valueOf("@numero");
 								riskIndex = certNode.valueOf("@idBien");
- 								certUrl = current.getText();
- 								//certBase64 = current.getText();
+								certUrl = current.getText();
+								// certBase64 = current.getText();
 								Base64DecodePdf bdf = new Base64DecodePdf();
 
-								/* This was phased out by ARCA, certs are now URLs
-								if (bdf.decodeString(certNo, certBase64)) {
-
-									response = ("Certificate Saved");
-									statusCode = "00";
-
-									SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo, "00");
-								} else {
-
-									response = ("Certificate Could not be saved");
-									statusCode = "01";
-								}
-								*/
+								/*
+								 * This was phased out by ARCA, certs are now URLs if (bdf.decodeString(certNo,
+								 * certBase64)) {
+								 * 
+								 * response = ("Certificate Saved"); statusCode = "00";
+								 * 
+								 * SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo,
+								 * "00"); } else {
+								 * 
+								 * response = ("Certificate Could not be saved"); statusCode = "01"; }
+								 */
 								if (bdf.saveCertFromUrl(certNo, certUrl)) {
 
 									response = ("Certificate Saved");
 									statusCode = "00";
 
-									SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo, "00",certUrl);
+									SaveResponse.updateCertificate(envelopeID, documentID, riskIndex, certNo, "00",
+											certUrl);
 								} else {
 
 									response = ("Certificate Could not be saved");
@@ -182,7 +179,7 @@ public class ResponseProsess {
 						}
 
 					} else if (responseType.equals("cancellation")) {
-						//if the response is a cancellation
+						// if the response is a cancellation
 						certNo = documentNode.valueOf("@numeroCertificat");
 						String newCert = "";
 						switch (documentNode.selectSingleNode("statut").getText()) {
@@ -190,22 +187,29 @@ public class ResponseProsess {
 
 							Element errorElement = (Element) documentNode.selectSingleNode("erreur");
 							String code = errorElement.attributeValue("code");
-							response = (XMLMapper.findErrorMessage(code) + " "
-									+ documentNode.selectSingleNode("erreur").getText());
-							newCert = response;
-							statusCode = "01";
+							if (code.equals("C85")) {
+
+								newCert = "CANCELLED " + certNo;
+								response = ("Success");
+								statusCode = "00";
+							} else {
+								response = (XMLMapper.findErrorMessage(code) + " "
+										+ documentNode.selectSingleNode("erreur").getText());
+								newCert = response;
+								statusCode = "01";
+							}
 							break;
 						case "OK":
-							newCert = "CANCELLED "+certNo;
+							newCert = "CANCELLED " + certNo;
 							response = ("Success");
 							statusCode = "00";
-							
+
 							break;
 						default:
 
 							break;
 						}
-						/*Updating the response if it is a cancellation*/
+						/* Updating the response if it is a cancellation */
 						try {
 							try (Connection oraConn = CreateConnection.getOraConn();
 									PreparedStatement update = oraConn.prepareStatement(
@@ -220,22 +224,24 @@ public class ResponseProsess {
 
 							}
 							String dbCertNo = "-1";
-							
 
 							try (Connection oraConn = CreateConnection.getOraConn();
 									Statement stmt = oraConn.createStatement();
 
-									ResultSet rs = stmt.executeQuery("select ar_cert_no  from ARCA_REQUESTS"
-											+ " where AR_ENVELOPE_ID = " + envelopeID + " AND  AR_REQUEST_TYPE = 'CANCELLATION' ")) {
-
-								dbCertNo = rs.getString("ar_cert_no");
+									ResultSet rs = stmt.executeQuery(
+											"select ar_cert_no  from ARCA_REQUESTS" + " where AR_ENVELOPE_ID = "
+													+ envelopeID + " AND  AR_REQUEST_TYPE = 'CANCELLATION' ")) {
+								while (rs.next()) {
+									dbCertNo = rs.getString("ar_cert_no");
+								}
 
 							}
-							
-							dbCertNo = dbCertNo.equalsIgnoreCase("-1")?certNo:dbCertNo;
-							
-							SaveResponse.updateCancelledCertificate(envelopeID, "0", riskIndex, dbCertNo, "01",newCert);
+							System.err.println("dbCertNo " + dbCertNo);
+							dbCertNo = dbCertNo.equalsIgnoreCase("-1") ? certNo : dbCertNo;
+							System.err.println("finalCert " + dbCertNo);
 
+							SaveResponse.updateCancelledCertificate(envelopeID, "0", riskIndex, dbCertNo, "01",
+									newCert);
 
 						} catch (Exception e) {
 							e.printStackTrace();

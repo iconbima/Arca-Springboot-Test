@@ -1,6 +1,7 @@
 package com.arca;
 
 import java.sql.ResultSet;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -40,7 +41,8 @@ public class ArcaController {
 			System.out.println("Database Connected!");
 			System.out.println("---------------------setting default values------------------------");
 
-			try (Statement stmt = CreateConnection.getOraConn().createStatement();
+			try (Connection conn = CreateConnection.getOraConn();
+					Statement stmt = conn.createStatement();
 					ResultSet rs = stmt.executeQuery(
 							"select sys_name,sys_code from ad_system_codes where sys_type = 'ARCA_API_DETAILS'");) {
 				while (rs.next()) {

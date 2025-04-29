@@ -37,7 +37,7 @@ public class SubmitMotorPolicy {
 					Statement stmt = oraConn.createStatement();
 
 					ResultSet rs = stmt.executeQuery(
-							"select nvl(max(AR_ENVELOPE_ID)+1,1) correlation_id, nvl(max(AR_DOCUMENT_ID)+1,1) document_id from ARCA_REQUESTS")) {
+							"select ARCA_ENVELOPE_ID_SEQ.nextval correlation_id, ARCA_DOCUMENT_ID_SEQ.nextval document_id from dual")) {
 				while (rs.next()) {
 
 					RabbitMQSender sender = new RabbitMQSender();
@@ -412,7 +412,7 @@ public class SubmitMotorPolicy {
 													+ "                and a.AI_ORG_CODE = " + Settings.orgCode
 													+ " \r\n" + "              and AI_PL_INDEX = " + pl_index)) {
 								while (vehicle.next()) {
-									String validateMakeModel = SubmitMotorVehicle.validateMakeModel(
+									String validateMakeModel = SubmitMotorVehicle.validateMakeModel(vehicle.getString("ai_regn_no"),
 											vehicle.getString("ai_make"), vehicle.getString("ai_model"));
 									if (!validateMakeModel.equals("Complete")) {
 										return validateMakeModel;
@@ -1156,7 +1156,7 @@ public class SubmitMotorPolicy {
 						while (vehicle.next()) {
 
 							String validateMakeModel = SubmitMotorVehicle
-									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+									.validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"), vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
 							}
@@ -1690,7 +1690,7 @@ public class SubmitMotorPolicy {
 						while (vehicle.next()) {
 
 							String validateMakeModel = SubmitMotorVehicle
-									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+									.validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"), vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
 							}
@@ -2436,7 +2436,7 @@ public class SubmitMotorPolicy {
 						while (vehicle.next()) {
 
 							String validateMakeModel = SubmitMotorVehicle
-									.validateMakeModel(vehicle.getString("ai_make"), vehicle.getString("ai_model"));
+									.validateMakeModel(vehicle.getString("ai_regn_no"),vehicle.getString("ai_make"), vehicle.getString("ai_model"));
 							if (!validateMakeModel.equals("Complete")) {
 								return validateMakeModel;
 							}
@@ -2742,7 +2742,7 @@ public class SubmitMotorPolicy {
 
 				if (rset.next()) {
 					do {
-						if (rset.getString("COL_VALUE").equals("N/A")) {
+						if (rset.getString("COL_VALUE").equals("N/A")||rset.getString("COL_VALUE")==null) {
 							return "Error. " + rset.getString("COL") + " is empty for vehicle "
 									+ rset.getString("AI_REGN_NO");
 						}
